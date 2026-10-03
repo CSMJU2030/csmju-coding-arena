@@ -11,3 +11,6 @@ generated/
 *.pem
 *.key
 !.env.example
+.reference/
+*.tsbuildinfo
+artifacts/
