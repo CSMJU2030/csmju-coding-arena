@@ -1,0 +1,146 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SubmissionStatus {
+  PENDING
+  EVALUATING // 🎯 เพิ่มบรรทัดนี้: ล็อคสถานะว่า "กำลังตรวจอยู่"
+  ACCEPTED
+  WRONG_ANSWER
+  TIME_LIMIT_EXCEEDED
+  RUNTIME_ERROR
+  COMPILATION_ERROR
+}
+
+enum MatchStatus {
+  ACTIVE
+  COMPLETED
+  DRAW
+}
+
+enum MatchRoundStatus {
+  PENDING
+  ACTIVE
+  WON
+  DRAW
+}
+
+model User {
+  id                   String  @id @default(uuid())
+  coreUserId           String  @unique @map("core_user_id")
+  displayName          String  @unique @map("display_name")
+  eloRating            Int     @default(1200) @map("elo_rating")
+  hasCompetitiveRating Boolean @default(false) @map("has_competitive_rating")
+
+  problems           Problem[]
+  submissions        Submission[]
+  queued_match       MatchQueue?
+  matchesAsPlayerOne Match[]      @relation("MatchPlayerOne")
+  matchesAsPlayerTwo Match[]      @relation("MatchPlayerTwo")
+  matchesWon         Match[]      @relation("MatchWinner")
+  roundsWon          MatchRound[] @relation("RoundWinner")
+
+  @@map("users")
+}
+
+model Problem {
+  id          String  @id @default(uuid())
+  authorId    String  @map("author_id")
+  title       String
+  description String  @db.Text
+  timeLimitMs Int     @map("time_limit_ms")
+  isActive    Boolean @default(true) @map("is_active")
+
+  author      User         @relation(fields: [authorId], references: [id])
+  testCases   TestCase[]
+  submissions Submission[]
+  matchRounds MatchRound[]
+
+  @@map("problems")
+}
+
+model TestCase {
+  id             String  @id @default(uuid())
+  problemId      String  @map("problem_id")
+  inputData      String  @map("input_data") @db.Text
+  expectedOutput String  @map("expected_output") @db.Text
+  isHidden       Boolean @default(false) @map("is_hidden")
+
+  problem Problem @relation(fields: [problemId], references: [id])
+
+  @@map("test_cases")
+}
+
+model Submission {
+  id           String           @id @default(uuid())
+  studentId    String           @map("student_id")
+  problemId    String           @map("problem_id")
+  sourceCode   String           @map("source_code") @db.Text
+  status       SubmissionStatus @default(PENDING)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  evaluatedAt  DateTime?        @map("evaluated_at")
+  matchRoundId String?          @map("match_round_id")
+
+  student    User        @relation(fields: [studentId], references: [id])
+  problem    Problem     @relation(fields: [problemId], references: [id])
+  matchRound MatchRound? @relation(fields: [matchRoundId], references: [id])
+
+  @@index([matchRoundId, status, evaluatedAt])
+  @@map("submissions")
+}
+
+model MatchQueue {
+  id        String   @id @default(uuid())
+  playerId  String   @unique @map("player_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("match_queue")
+}
+
+model Match {
+  id          String      @id @default(uuid())
+  playerOneId String      @map("player_one_id")
+  playerTwoId String      @map("player_two_id")
+  winnerId    String?     @map("winner_id")
+  status      MatchStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  completedAt DateTime?   @map("completed_at")
+
+  playerOne User         @relation("MatchPlayerOne", fields: [playerOneId], references: [id])
+  playerTwo User         @relation("MatchPlayerTwo", fields: [playerTwoId], references: [id])
+  winner    User?        @relation("MatchWinner", fields: [winnerId], references: [id])
+  rounds    MatchRound[]
+
+  @@index([playerOneId, status])
+  @@index([playerTwoId, status])
+  @@map("matches")
+}
+
+model MatchRound {
+  id          String           @id @default(uuid())
+  matchId     String           @map("match_id")
+  problemId   String           @map("problem_id")
+  roundNumber Int              @map("round_number")
+  status      MatchRoundStatus @default(PENDING)
+  winnerId    String?          @map("winner_id")
+  endsAt      DateTime?        @map("ends_at")
+  completedAt DateTime?        @map("completed_at")
+
+  match       Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  problem     Problem      @relation(fields: [problemId], references: [id])
+  winner      User?        @relation("RoundWinner", fields: [winnerId], references: [id])
+  submissions Submission[]
+
+  @@unique([matchId, roundNumber])
+  @@map("match_rounds")
+}

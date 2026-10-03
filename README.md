@@ -3,7 +3,7 @@
 Coding Arena — ระบบย่อยของโครงการ CSMJU2030
 
 มาตรฐานกลางอยู่ใน `standards/` (submodule ของ CSMJU2030/csmju2030-standards)
-สร้างจาก standards v1.0.0
+ใช้ standards v1.7.0 ตาม `.standards-version`
 
 ## เริ่มทำงาน
 
