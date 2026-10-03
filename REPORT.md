@@ -6,7 +6,11 @@
 
 ยังไม่ผ่าน conformance ครบตามมาตรฐาน และยังไม่พร้อมเปิดใช้ SSO จริง
 
-ตัวตรวจ static รอบสุดท้ายแสดง 18 PASS และ 1 FAIL จาก 19 scripts
+แก้ GH-04 โดยปรับ standards submodule ให้ชี้แท็ก v1.7.0 ที่ commit
+`88c4ce86271df943da1ffd1fde80633dfdd16a47` ให้ตรง `.standards-version`
+การแก้นี้เปลี่ยนเฉพาะ pointer และรายงาน ไม่เปลี่ยนโค้ดระบบ
+
+ตัวตรวจ static รอบก่อนแก้ GH-04 แสดง 18 PASS และ 1 FAIL จาก 19 scripts
 ในจำนวน PASS มี 2 scripts ที่ข้ามการตรวจเพราะเครื่องไม่มี jq จึงไม่ถือว่าทั้ง 18 รายการตรวจครบ
 ตรวจ whitelist dependency และการสร้าง OpenAPI/API types ซ้ำเพิ่มเติมด้วย Node แล้วผ่าน
 
@@ -23,10 +27,10 @@
 ❌ 1 / 19 checks failed — merge would be blocked.
 ```
 
-FAIL: check-submodule-pointer.sh — `.standards-version` ระบุ 1.7.0 แต่ submodule ชี้
+สาเหตุ GH-04 ในผลรันครั้งก่อน: `.standards-version` ระบุ 1.7.0 แต่ submodule ชี้
 `b0e3645e0ad4cc649a229513cdce37c980d02c30` แทนแท็ก v1.7.0
 ที่ `88c4ce86271df943da1ffd1fde80633dfdd16a47`
-ไม่ได้เปลี่ยน pointer เพราะผู้ใช้ไม่อนุมัติการดำเนินการนั้น
+ปัจจุบันปรับ pointer ให้ตรงแท็กแล้ว และเก็บผลรันครั้งก่อนข้างบนไว้เป็นประวัติ
 
 ```text
 CSMJU2030 Subsystem Conformance Runner
@@ -131,7 +135,6 @@ player_ratings เก็บเพียง reference ID ชื่อเล่น
   ค่า Callback URL ที่ต้องลงทะเบียนคือ `http://localhost:3202/auth/callback`
 - ไม่พบไฟล์บัญชีทดสอบสำหรับ Core Hub จริง จึงยังรัน L1–L3 และ SSO จริงไม่ได้
   ห้ามนับผล mock เป็นการผ่าน runtime conformance
-- submodule pointer ไม่ตรงแท็ก v1.7.0 และยังไม่ได้รับอนุมัติให้เปลี่ยน
 - ยังเข้าถึง template UI กลางไม่ได้ แหล่งที่ลองอ่านคืน 404
   components ปัจจุบันเป็น provisional ตามเอกสารและ tokens ไม่ใช่สำเนา template กลาง
   ใช้ CsmjuAppShell, Button, Notice, LoadingState, EmptyState, ErrorState, ConfirmDialog,
