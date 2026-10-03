@@ -1,16 +1,22 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiResult } from '../contracts/api-result.decorator';
+import { LeaderboardEntryDto } from '../contracts/api.dto';
+import { Controller, Get } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard, Roles } from '../auth/roles.guard';
+import { CollectionResult } from '../common/api-response';
+import { buildPaginationMeta } from '../common/dto/pagination.dto';
+
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { Permission } from '../auth/permissions';
 
 @Controller('v1/users')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('leaderboard')
-  @Roles('STUDENT', 'TEACHER')
+  @RequirePermissions(Permission.LEADERBOARD_READ)
+  @ApiResult(LeaderboardEntryDto, true, 200)
   async getLeaderboard() {
-    return this.usersService.getLeaderboard();
+    const data = await this.usersService.getLeaderboard();
+    return new CollectionResult(data, buildPaginationMeta(data.length, 1, 5));
   }
 }

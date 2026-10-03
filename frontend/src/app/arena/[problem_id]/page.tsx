@@ -1,17 +1,14 @@
 "use client";
 
+import type { components } from "@/lib/api-schema";
+
 import { Button, Notice, ErrorState, LoadingState } from "@/components/ui";
 
 import { useState, useRef, useEffect, use } from "react";
 import { CodeEditor } from "@/components/code-editor";
 import { ApiRequestError, apiRequest } from "@/lib/api";
 
-interface Problem {
-  id: string;
-  title: string;
-  description: string;
-  timeLimitMs: number;
-}
+type Problem = components["schemas"]["ProblemDto"];
 
 export default function CodingArenaPage({
   params,

@@ -2,7 +2,7 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -32,9 +32,9 @@ enum MatchRoundStatus {
   DRAW
 }
 
-model User {
+model PlayerRating {
   id                   String  @id @default(uuid())
-  coreUserId           String  @unique @map("core_user_id")
+  coreUserId String @unique @map("core_user_id") @db.VarChar(64)
   displayName          String  @unique @map("display_name")
   eloRating            Int     @default(1200) @map("elo_rating")
   hasCompetitiveRating Boolean @default(false) @map("has_competitive_rating")
@@ -47,7 +47,9 @@ model User {
   matchesWon         Match[]      @relation("MatchWinner")
   roundsWon          MatchRound[] @relation("RoundWinner")
 
-  @@map("users")
+  @@map("player_ratings")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }
 
 model Problem {
@@ -58,12 +60,14 @@ model Problem {
   timeLimitMs Int     @map("time_limit_ms")
   isActive    Boolean @default(true) @map("is_active")
 
-  author      User         @relation(fields: [authorId], references: [id])
+  author      PlayerRating         @relation(fields: [authorId], references: [id])
   testCases   TestCase[]
   submissions Submission[]
   matchRounds MatchRound[]
 
   @@map("problems")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }
 
 model TestCase {
@@ -76,6 +80,8 @@ model TestCase {
   problem Problem @relation(fields: [problemId], references: [id])
 
   @@map("test_cases")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }
 
 model Submission {
@@ -85,15 +91,17 @@ model Submission {
   sourceCode   String           @map("source_code") @db.Text
   status       SubmissionStatus @default(PENDING)
   createdAt    DateTime         @default(now()) @map("created_at")
+  evaluationStartedAt DateTime? @map("evaluation_started_at")
   evaluatedAt  DateTime?        @map("evaluated_at")
   matchRoundId String?          @map("match_round_id")
 
-  student    User        @relation(fields: [studentId], references: [id])
+  student    PlayerRating        @relation(fields: [studentId], references: [id])
   problem    Problem     @relation(fields: [problemId], references: [id])
   matchRound MatchRound? @relation(fields: [matchRoundId], references: [id])
 
   @@index([matchRoundId, status, evaluatedAt])
   @@map("submissions")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }
 
 model MatchQueue {
@@ -101,10 +109,11 @@ model MatchQueue {
   playerId  String   @unique @map("player_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  player PlayerRating @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@map("match_queue")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }
 
 model Match {
@@ -116,14 +125,15 @@ model Match {
   createdAt   DateTime    @default(now()) @map("created_at")
   completedAt DateTime?   @map("completed_at")
 
-  playerOne User         @relation("MatchPlayerOne", fields: [playerOneId], references: [id])
-  playerTwo User         @relation("MatchPlayerTwo", fields: [playerTwoId], references: [id])
-  winner    User?        @relation("MatchWinner", fields: [winnerId], references: [id])
+  playerOne PlayerRating         @relation("MatchPlayerOne", fields: [playerOneId], references: [id])
+  playerTwo PlayerRating         @relation("MatchPlayerTwo", fields: [playerTwoId], references: [id])
+  winner    PlayerRating?        @relation("MatchWinner", fields: [winnerId], references: [id])
   rounds    MatchRound[]
 
   @@index([playerOneId, status])
   @@index([playerTwoId, status])
   @@map("matches")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }
 
 model MatchRound {
@@ -138,9 +148,11 @@ model MatchRound {
 
   match       Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
   problem     Problem      @relation(fields: [problemId], references: [id])
-  winner      User?        @relation("RoundWinner", fields: [winnerId], references: [id])
+  winner      PlayerRating?        @relation("RoundWinner", fields: [winnerId], references: [id])
   submissions Submission[]
 
   @@unique([matchId, roundNumber])
   @@map("match_rounds")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }

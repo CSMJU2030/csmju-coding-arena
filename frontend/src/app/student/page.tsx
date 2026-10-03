@@ -1,5 +1,7 @@
 "use client";
 
+import type { components } from "@/lib/api-schema";
+
 import {
   Button,
   Notice,
@@ -15,24 +17,16 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest } from "@/lib/api";
 
-interface QueueState {
-  state: "idle" | "waiting" | "matched";
-  id?: string;
-  position?: number;
-}
+type QueueState = components["schemas"]["QueueStateDto"];
 
-interface LeaderboardEntry {
-  rank: number;
-  displayName: string;
-  eloRating: number;
-}
+type LeaderboardEntry = components["schemas"]["LeaderboardEntryDto"];
 
-interface Profile {
-  coreRole: string;
-}
+type Profile = components["schemas"]["MeDto"];
+type Rating = components["schemas"]["RatingDto"];
 
 export default function StudentDashboard() {
   const router = useRouter();
+  const [rating, setRating] = useState<Rating | null>(null);
   const [queue, setQueue] = useState<QueueState>({ state: "idle" });
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,13 +60,17 @@ export default function StudentDashboard() {
           }
           return;
         }
-        const [current, scores] = await Promise.all([
+        const [current, scores, myRating] = await Promise.all([
           apiRequest<QueueState>("/api/v1/matches/current"),
           apiRequest<LeaderboardEntry[]>("/api/v1/users/leaderboard"),
+          apiRequest<Rating>(
+            "/api/v1/player-ratings/me",
+          ),
         ]);
         if (!active) return;
         setQueue(current);
         setLeaderboard(scores);
+        setRating(myRating);
         setDashboardReady(true);
         if (current.state === "matched" && current.id) {
           router.replace(`/matches/${current.id}`);
@@ -177,6 +175,15 @@ export default function StudentDashboard() {
         title="สนามประลองอัลกอริทึม"
         description="จับคู่แบบ 1 ต่อ 1 ใช้โจทย์ร่วมกัน 3 ข้อที่สุ่มไม่ซ้ำ ใครชนะครบ 2 ข้อก่อนเป็นผู้ชนะ"
       />
+
+      {rating && (
+        <p className="rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface">
+          {rating.displayName} · คะแนนของคุณ{" "}
+          <strong className="text-primary tabular-nums">
+            {rating.eloRating} Elo
+          </strong>
+        </p>
+      )}
 
       {error && (
         <Notice>

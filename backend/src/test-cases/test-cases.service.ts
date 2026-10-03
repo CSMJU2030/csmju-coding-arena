@@ -1,9 +1,16 @@
+import type { Prisma } from '../../generated/prisma/client';
+import { withCompetitionLock } from '../matches/competition-lock';
 import {
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  PaginationQueryDto,
+  buildPaginationMeta,
+} from '../common/dto/pagination.dto';
+import { CollectionResult } from '../common/api-response';
 import {
   CreateTestCaseDto,
   UpdateTestCaseDto,
@@ -14,62 +21,81 @@ export class TestCasesService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateTestCaseDto) {
-    await this.assertProblemEditable(dto.problemId);
-    return this.prisma.testCase.create({
-      data: {
-        problemId: dto.problemId,
-        inputData: dto.inputData,
-        expectedOutput: dto.expectedOutput,
-        isHidden: dto.isHidden,
-      },
+    return withCompetitionLock(this.prisma, async (tx) => {
+      await this.assertProblemEditable(dto.problemId, tx);
+      return tx.testCase.create({
+        data: {
+          problemId: dto.problemId,
+          inputData: dto.inputData,
+          expectedOutput: dto.expectedOutput,
+          isHidden: dto.isHidden,
+        },
+      });
     });
   }
 
-  async findByProblemId(problemId: string) {
-    return this.prisma.testCase.findMany({
-      where: { problemId },
-    });
+  async findByProblemId(problemId: string, query = new PaginationQueryDto()) {
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.testCase.findMany({
+        where: { problemId },
+        orderBy: { id: 'asc' },
+        skip: query.skip,
+        take: query.take,
+      }),
+      this.prisma.testCase.count({ where: { problemId } }),
+    ]);
+    return new CollectionResult(
+      data,
+      buildPaginationMeta(total, query.page ?? 1, query.take),
+    );
   }
 
   async update(id: string, dto: UpdateTestCaseDto) {
-    const testCase = await this.prisma.testCase.findUnique({
-      where: { id },
-      select: { problemId: true },
+    return withCompetitionLock(this.prisma, async (tx) => {
+      const testCase = await tx.testCase.findUnique({
+        where: { id },
+        select: { problemId: true },
+      });
+      if (!testCase) throw new NotFoundException('Test case not found');
+      await this.assertProblemEditable(testCase.problemId, tx);
+      const result = await tx.testCase.updateMany({
+        where: { id },
+        data: dto,
+      });
+      if (!result.count) {
+        throw new NotFoundException('Test case not found');
+      }
+      return tx.testCase.findUniqueOrThrow({ where: { id } });
     });
-    if (!testCase) throw new NotFoundException('Test case not found');
-    await this.assertProblemEditable(testCase.problemId);
-    const result = await this.prisma.testCase.updateMany({
-      where: { id },
-      data: dto,
-    });
-    if (!result.count) {
-      throw new NotFoundException('Test case not found');
-    }
-    return this.prisma.testCase.findUniqueOrThrow({ where: { id } });
   }
 
   async remove(id: string) {
-    const testCase = await this.prisma.testCase.findUnique({
-      where: { id },
-      select: { problemId: true },
+    return withCompetitionLock(this.prisma, async (tx) => {
+      const testCase = await tx.testCase.findUnique({
+        where: { id },
+        select: { problemId: true },
+      });
+      if (!testCase) throw new NotFoundException('Test case not found');
+      await this.assertProblemEditable(testCase.problemId, tx);
+      const result = await tx.testCase.deleteMany({ where: { id } });
+      if (!result.count) {
+        throw new NotFoundException('Test case not found');
+      }
+      return { id, deleted: true };
     });
-    if (!testCase) throw new NotFoundException('Test case not found');
-    await this.assertProblemEditable(testCase.problemId);
-    const result = await this.prisma.testCase.deleteMany({ where: { id } });
-    if (!result.count) {
-      throw new NotFoundException('Test case not found');
-    }
-    return { id };
   }
 
-  private async assertProblemEditable(problemId: string) {
-    const problem = await this.prisma.problem.findUnique({
+  private async assertProblemEditable(
+    problemId: string,
+    tx: Prisma.TransactionClient,
+  ) {
+    const problem = await tx.problem.findUnique({
       where: { id: problemId },
       select: { id: true },
     });
     if (!problem) throw new NotFoundException('Problem not found');
 
-    const activeMatchRound = await this.prisma.matchRound.findFirst({
+    const activeMatchRound = await tx.matchRound.findFirst({
       where: { problemId, match: { status: 'ACTIVE' } },
       select: { id: true },
     });

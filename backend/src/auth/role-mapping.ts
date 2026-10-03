@@ -1,10 +1,33 @@
-import type { CoreRole } from './auth.service';
+import { SubsystemRole } from './core-hub-identity';
 
-export type SubsystemRole = 'STUDENT' | 'TEACHER';
+/**
+ * Core Hub role -> Subsystem role (spec §14).
+ *
+ *   Core Hub Role      Subsystem Role
+ *   ---------------------------------
+ *   student            STUDENT
+ *   alumni             ALUMNI
+ *   staff              STAFF    (staff who are not lecturers)
+ *   lecturer           STAFF    (standards 1.0.6 / 1.6.0)
+ *   guest              ALUMNI   (looks at rooms only)
+ *   admin              ADMIN
+ *
+ * The mapping is explicit and lives only in this subsystem. The Core Hub role
+ * vocabulary can change without changing subsystem authorization logic - only
+ * this table changes.
+ */
+export const CORE_ROLE_TO_SUBSYSTEM_ROLE: Readonly<Record<string, SubsystemRole>> = Object.freeze({
+  student: SubsystemRole.STUDENT,
+  lecturer: SubsystemRole.STAFF,
+});
 
-export const CORE_ROLE_TO_SUBSYSTEM_ROLE: Partial<
-  Record<CoreRole, SubsystemRole>
-> = {
-  student: 'STUDENT',
-  lecturer: 'TEACHER',
-};
+/**
+ * Returns the subsystem role for a Core Hub role, or `null` when the Core Hub
+ * role has no meaning in this subsystem (authenticated, but not authorized).
+ */
+export function mapCoreRoleToSubsystemRole(coreRole: string | undefined): SubsystemRole | null {
+  if (typeof coreRole !== 'string') {
+    return null;
+  }
+  return CORE_ROLE_TO_SUBSYSTEM_ROLE[coreRole.trim().toLowerCase()] ?? null;
+}

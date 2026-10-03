@@ -8,10 +8,10 @@
     "start": "next start --port 3202",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "generate:api": "openapi-typescript ../backend/openapi.json -o src/lib/api-schema.d.ts"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
     "next": "16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -23,6 +23,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "openapi-typescript": "^7.10.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

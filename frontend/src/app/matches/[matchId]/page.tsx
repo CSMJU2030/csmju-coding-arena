@@ -1,5 +1,7 @@
 "use client";
 
+import type { components } from "@/lib/api-schema";
+
 import {
   Button,
   Notice,
@@ -10,41 +12,11 @@ import {
 
 import { CodeEditor } from "@/components/code-editor";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { ApiRequestError, apiRequest } from "@/lib/api";
 
-interface MatchRound {
-  id: string;
-  roundNumber: number;
-  status: "PENDING" | "ACTIVE" | "WON" | "DRAW";
-  winnerId: string | null;
-  endsAt: string | null;
-  problem: {
-    id: string;
-    title: string;
-    description: string;
-    timeLimitMs: number;
-  };
-  submissions: Array<{
-    id: string;
-    status: string;
-    createdAt: string;
-    evaluatedAt: string | null;
-  }>;
-}
-
-interface MatchData {
-  state: "matched";
-  id: string;
-  status: "ACTIVE" | "COMPLETED" | "DRAW";
-  winnerId: string | null;
-  myPlayerId: string;
-  playerOne: { id: string; displayName: string; eloRating: number };
-  playerTwo: { id: string; displayName: string; eloRating: number };
-  currentRound: number | null;
-  rounds: MatchRound[];
-}
+type MatchData = components["schemas"]["MatchDto"];
 
 const starterCode = `import sys
 
@@ -57,6 +29,15 @@ export default function MatchPage() {
   const matchId = params.matchId;
   const [match, setMatch] = useState<MatchData | null>(null);
   const [code, setCode] = useState(starterCode);
+  const draftRound = useRef<string | null>(null);
+  function changeCode(value: string) {
+    setCode(value);
+    if (draftRound.current)
+      sessionStorage.setItem(
+        "arena-draft:" + matchId + ":" + draftRound.current,
+        value,
+      );
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -65,6 +46,18 @@ export default function MatchPage() {
 
   const refreshMatch = useCallback(async () => {
     const updated = await apiRequest<MatchData>(`/api/v1/matches/${matchId}`);
+    const activeRound = updated.rounds.find(
+      (item) => item.roundNumber === updated.currentRound,
+    );
+    if (activeRound && activeRound.id !== draftRound.current) {
+      setCode(
+        sessionStorage.getItem(
+          "arena-draft:" + matchId + ":" + activeRound.id,
+        ) ?? starterCode,
+      );
+      draftRound.current = activeRound.id;
+      setNotice("");
+    }
     setMatch(updated);
   }, [matchId]);
 
@@ -245,7 +238,7 @@ export default function MatchPage() {
             {round.problem.description}
           </div>
           <div className="h-80 overflow-hidden rounded-xl border border-outline-variant/40 md:h-96">
-            <CodeEditor value={code} onChange={setCode} />
+            <CodeEditor value={code} onChange={changeCode} />
           </div>
           {error ? <Notice>{error}</Notice> : null}
           {notice ? (

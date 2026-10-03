@@ -3,6 +3,26 @@ interface ApiEnvelope<T> {
   success: boolean;
 }
 
+/** Renew via Core Hub without reading the HttpOnly authentication cookie. */
+export function renewSession(): void {
+  if (typeof window === "undefined" || window.location.pathname === "/") return;
+  const next = window.location.pathname + window.location.search;
+  const key = "arena-sso-last-attempt";
+  try {
+    const previous = Number(sessionStorage.getItem(key) ?? 0);
+    if (Date.now() - previous < 60000) return;
+    sessionStorage.setItem(key, String(Date.now()));
+  } catch {
+    /* SSO still works when browser storage is disabled. */
+  }
+  window.location.assign(
+    new URL(
+      "/auth/login?next=" + encodeURIComponent(next),
+      window.location.origin,
+    ).toString(),
+  );
+}
+
 export class ApiRequestError extends Error {
   constructor(
     message: string,
@@ -91,6 +111,7 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401) renewSession();
     const error =
       payload && typeof payload === "object" && "error" in payload
         ? payload.error
@@ -156,4 +177,20 @@ export async function apiRequest<T>(
     );
   }
   return (payload as ApiEnvelope<T>).data;
+}
+
+/** Load bounded API pages so teacher search includes every problem and test case. */
+export async function apiCollection<T>(path: string): Promise<T[]> {
+  const result: T[] = [];
+  for (let page = 1; page <= 100; page++) {
+    const data = await apiRequest<T[]>(
+      `${path}${path.includes("?") ? "&" : "?"}page=${page}&limit=100`,
+    );
+    result.push(...data);
+    if (data.length < 100) return result;
+  }
+  throw new ApiRequestError(
+    "รายการมีจำนวนมากเกินกว่าที่จะแสดงทั้งหมด กรุณาติดต่อผู้ดูแลระบบ",
+    0,
+  );
 }

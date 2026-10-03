@@ -1,3 +1,12 @@
+import { Query } from '@nestjs/common';
+import { PaginationQueryDto } from '../common/dto/pagination.dto';
+import { ApiResult } from '../contracts/api-result.decorator';
+import {
+  ProblemDto,
+  ProblemManagementDto,
+  DeletedDto,
+  ProblemSummaryDto,
+} from '../contracts/api.dto';
 import {
   Controller,
   Post,
@@ -8,43 +17,42 @@ import {
   Param,
   ParseUUIDPipe,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import type { CoreUser } from '../auth/auth.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard, Roles } from '../auth/roles.guard';
+import type { CoreHubIdentity } from '../auth/core-hub-identity';
+
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { Permission } from '../auth/permissions';
 import { CreateProblemDto, UpdateProblemDto } from './dto/create-problem.dto';
 import { ProblemsService } from './problems.service';
 
-type AuthenticatedRequest = Request & { user: CoreUser };
+type AuthenticatedRequest = Request & { user: CoreHubIdentity };
 
 @Controller('v1/problems')
 // 🛡️ เปิดใช้งาน Guard ทั้งตรวจสอบ Token และตรวจสอบ Role
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class ProblemsController {
   constructor(private readonly problemsService: ProblemsService) {}
 
   @Post()
-  @Roles('TEACHER')
+  @RequirePermissions(Permission.PROBLEM_CREATE)
+  @ApiResult(ProblemDto, false, 201)
   async createProblem(
     @Body() createProblemDto: CreateProblemDto,
     @Req() request: AuthenticatedRequest,
   ) {
-    return this.problemsService.create(
-      request.user.coreUserId,
-      createProblemDto,
-    );
+    return this.problemsService.create(request.user.id, createProblemDto);
   }
 
   @Get('manage')
-  @Roles('TEACHER')
-  async getProblemsForManagement() {
-    return this.problemsService.findAll();
+  @RequirePermissions(Permission.PROBLEM_MANAGE)
+  @ApiResult(ProblemManagementDto, true, 200)
+  async getProblemsForManagement(@Query() query: PaginationQueryDto) {
+    return this.problemsService.findAll(query);
   }
 
   @Patch(':id')
-  @Roles('TEACHER')
+  @RequirePermissions(Permission.PROBLEM_UPDATE)
+  @ApiResult(ProblemDto, false, 200)
   async updateProblem(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() updateProblemDto: UpdateProblemDto,
@@ -53,7 +61,8 @@ export class ProblemsController {
   }
 
   @Delete(':id')
-  @Roles('TEACHER')
+  @RequirePermissions(Permission.PROBLEM_DELETE)
+  @ApiResult(DeletedDto, false, 200)
   async deleteProblem(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ) {
@@ -61,14 +70,16 @@ export class ProblemsController {
   }
 
   @Get()
-  @Roles('STUDENT', 'TEACHER')
-  async getProblems() {
-    return this.problemsService.findAllActive();
+  @RequirePermissions(Permission.PROBLEM_READ)
+  @ApiResult(ProblemSummaryDto, true, 200)
+  async getProblems(@Query() query: PaginationQueryDto) {
+    return this.problemsService.findAllActive(query);
   }
 
   // 🎯 อนุญาตให้ทั้งนักศึกษาและอาจารย์เรียกดูโจทย์แต่ละข้อได้
   @Get(':id')
-  @Roles('STUDENT', 'TEACHER')
+  @RequirePermissions(Permission.PROBLEM_READ)
+  @ApiResult(ProblemDto, false, 200)
   async getProblemById(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ) {

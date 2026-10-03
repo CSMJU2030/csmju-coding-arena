@@ -1,8 +1,6 @@
 import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { ApiExceptionFilter } from './common/api-exception.filter';
-import { ApiResponseInterceptor } from './common/api-response.interceptor';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -17,13 +15,16 @@ async function bootstrap() {
       { path: 'auth/logout', method: RequestMethod.POST },
     ],
   });
-  app.enableCors();
 
   app.useBodyParser('json', { limit: '50kb' });
   app.useBodyParser('urlencoded', { extended: true, limit: '50kb' });
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.useGlobalInterceptors(new ApiResponseInterceptor());
-  app.useGlobalFilters(new ApiExceptionFilter());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   await app.listen(process.env.PORT ?? 4202);
 }

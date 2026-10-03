@@ -17,7 +17,8 @@ const notoSansThai = Noto_Sans_Thai({
 
 export const metadata: Metadata = {
   title: "Coding Arena · CSMJU",
-  description: "สนามฝึกเขียนโปรแกรมสำหรับนักศึกษา สาขาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยแม่โจ้",
+  description:
+    "สนามฝึกเขียนโปรแกรมสำหรับนักศึกษา สาขาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยแม่โจ้",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

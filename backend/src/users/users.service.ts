@@ -12,7 +12,7 @@ export class UsersService {
       .digest('hex')
       .slice(0, 12);
 
-    return this.prisma.user.upsert({
+    return this.prisma.playerRating.upsert({
       where: { coreUserId },
       create: { coreUserId, displayName: `Player-${suffix}` },
       update: {},
@@ -20,7 +20,7 @@ export class UsersService {
   }
 
   async getLeaderboard() {
-    const users = await this.prisma.user.findMany({
+    const users = await this.prisma.playerRating.findMany({
       where: { hasCompetitiveRating: true },
       orderBy: [{ eloRating: 'desc' }, { id: 'asc' }],
       select: { displayName: true, eloRating: true },

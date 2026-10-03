@@ -1,7 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { CoreHubJwtGuard } from './auth/guards/core-hub-jwt.guard';
+import { PermissionsGuard } from './auth/guards/permissions.guard';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import configuration from './config/configuration';
+import { RequestRateGuard } from './common/request-rate.guard';
 import { ScheduleModule } from '@nestjs/schedule';
 
 import { PrismaModule } from './prisma/prisma.module';
@@ -19,14 +24,8 @@ import { HealthController } from './health.controller';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      load: [configuration],
     }),
-    // 🛡️ ตั้งค่า Rate Limiting: 1 IP ยิง API ได้สูงสุด 10 ครั้ง ภายใน 60,000 ms (1 นาที)
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 10,
-      },
-    ]),
     ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
@@ -42,8 +41,12 @@ import { HealthController } from './health.controller';
     // 🛡️ บังคับใช้ Rate Limiting ทั่วทั้งแอปพลิเคชัน
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: CoreHubJwtGuard,
     },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: RequestRateGuard },
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],
 })
 export class AppModule {}

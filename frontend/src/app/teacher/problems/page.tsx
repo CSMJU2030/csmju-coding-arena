@@ -1,5 +1,7 @@
 "use client";
 
+import type { components } from "@/lib/api-schema";
+
 import {
   Button,
   Notice,
@@ -15,18 +17,12 @@ import {
 } from "@/components/ui";
 
 import Link from "next/link";
+import { useFormDraft } from "@/lib/use-form-draft";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiRequestError, apiRequest } from "@/lib/api";
+import { ApiRequestError, apiRequest, apiCollection } from "@/lib/api";
 
-interface Problem {
-  id: string;
-  title: string;
-  description: string;
-  timeLimitMs: number;
-  isActive: boolean;
-  _count: { testCases: number };
-}
+type Problem = components["schemas"]["ProblemManagementDto"];
 
 interface ProblemForm {
   title: string;
@@ -42,14 +38,15 @@ const emptyForm: ProblemForm = {
   isActive: true,
 };
 
-interface Profile {
-  coreRole: string;
-}
+type Profile = components["schemas"]["MeDto"];
 
 export default function TeacherProblemsPage() {
   const router = useRouter();
   const validation = useFormValidation();
-  const [formData, setFormData] = useState<ProblemForm>(emptyForm);
+  const [formData, setFormData] = useFormDraft<ProblemForm>(
+    "arena-problem-create",
+    emptyForm,
+  );
   const [problems, setProblems] = useState<Problem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProblemForm>(emptyForm);
@@ -64,7 +61,7 @@ export default function TeacherProblemsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const loadProblems = useCallback(async () => {
-    const result = await apiRequest<Problem[]>("/api/v1/problems/manage");
+    const result = await apiCollection<Problem>("/api/v1/problems/manage");
     setProblems(result);
   }, []);
 

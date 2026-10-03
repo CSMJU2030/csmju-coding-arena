@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EvaluationService } from './evaluation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchesService } from '../matches/matches.service';
+import { SandboxRunner } from './sandbox-runner';
 
 describe('EvaluationService', () => {
   let service: EvaluationService;
@@ -10,6 +11,7 @@ describe('EvaluationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EvaluationService,
+        { provide: SandboxRunner, useValue: { run: jest.fn() } },
         {
           provide: PrismaService,
           useValue: {
@@ -18,7 +20,7 @@ describe('EvaluationService', () => {
               update: jest.fn(),
               updateMany: jest.fn(),
             },
-            user: { update: jest.fn() },
+            playerRating: { update: jest.fn() },
           },
         },
         {

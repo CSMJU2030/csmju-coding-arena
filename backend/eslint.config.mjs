@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs'],
+    ignores: ['eslint.config.mjs', 'generated/**', 'src/generated/**', 'dist/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -30,6 +30,15 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
       "prettier/prettier": ["error", { endOfLine: "auto" }],
+    },
+  },
+  {
+    ...tseslint.configs.disableTypeChecked,
+    files: ['src/auth/**', 'src/core-hub/**', 'src/common/**', 'test/helpers/**'],
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      // These shared modules must retain the reference source unchanged.
+      'prettier/prettier': 'off',
     },
   },
 );

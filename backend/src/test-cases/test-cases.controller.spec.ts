@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TestCasesController } from './test-cases.controller';
 import { TestCasesService } from './test-cases.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
+
+import { PermissionsGuard as RolesGuard } from '../auth/guards/permissions.guard';
+import { CoreHubJwtGuard as JwtAuthGuard } from '../auth/guards/core-hub-jwt.guard';
 
 describe('TestCasesController', () => {
   let controller: TestCasesController;

@@ -10,7 +10,7 @@ import {
   MatchStatus,
   Prisma,
   SubmissionStatus,
-} from '../generated/prisma/client';
+} from '../../generated/prisma/client';
 import { randomInt } from 'node:crypto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
@@ -31,7 +31,7 @@ export class MatchesService {
     const user = await this.usersService.ensureUser(coreUserId);
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${MATCH_QUEUE_LOCK_ID})`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${MATCH_QUEUE_LOCK_ID})::text`;
 
       const activeMatch = await tx.match.findFirst({
         where: {
@@ -99,7 +99,7 @@ export class MatchesService {
   async leaveQueue(coreUserId: string) {
     const user = await this.usersService.ensureUser(coreUserId);
     await this.prisma.matchQueue.deleteMany({ where: { playerId: user.id } });
-    return { state: 'not_queued' as const };
+    return { state: 'idle' as const };
   }
 
   async getCurrent(coreUserId: string) {
@@ -201,36 +201,50 @@ export class MatchesService {
     sourceCode: string,
   ) {
     const user = await this.usersService.ensureUser(coreUserId);
-    const round = await this.prisma.matchRound.findFirst({
-      where: {
-        matchId,
-        status: MatchRoundStatus.ACTIVE,
-        match: {
-          status: MatchStatus.ACTIVE,
-          OR: [{ playerOneId: user.id }, { playerTwoId: user.id }],
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM match_rounds WHERE match_id = ${matchId} AND status = 'ACTIVE' FOR UPDATE`;
+      const round = await tx.matchRound.findFirst({
+        where: {
+          matchId,
+          status: MatchRoundStatus.ACTIVE,
+          match: {
+            status: MatchStatus.ACTIVE,
+            OR: [{ playerOneId: user.id }, { playerTwoId: user.id }],
+          },
         },
-      },
-      include: { problem: { select: { id: true } } },
-    });
-    if (!round) {
-      throw new ConflictException('There is no active round for this match');
-    }
-    if (round.problemId !== problemId) {
-      throw new BadRequestException(
-        'Submission problem does not match the active round',
-      );
-    }
-    if (!round.endsAt || round.endsAt.getTime() <= Date.now()) {
-      throw new ConflictException('The active round has expired');
-    }
+        include: { problem: { select: { id: true } } },
+      });
+      if (!round) {
+        throw new ConflictException('There is no active round for this match');
+      }
+      if (round.problemId !== problemId) {
+        throw new BadRequestException(
+          'Submission problem does not match the active round',
+        );
+      }
+      if (!round.endsAt || round.endsAt.getTime() <= Date.now()) {
+        throw new ConflictException('The active round has expired');
+      }
 
-    return this.prisma.submission.create({
-      data: {
-        studentId: user.id,
-        problemId,
-        matchRoundId: round.id,
-        sourceCode,
-      },
+      const outstanding = await tx.submission.count({
+        where: {
+          matchRoundId: round.id,
+          studentId: user.id,
+          status: {
+            in: [SubmissionStatus.PENDING, SubmissionStatus.EVALUATING],
+          },
+        },
+      });
+      if (outstanding)
+        throw new ConflictException('Please wait for your previous submission');
+      return tx.submission.create({
+        data: {
+          studentId: user.id,
+          problemId,
+          matchRoundId: round.id,
+          sourceCode,
+        },
+      });
     });
   }
 
@@ -248,12 +262,15 @@ export class MatchesService {
     await this.finalizeRound(submission.matchRoundId, evaluatedAt);
   }
 
-  @Cron(CronExpression.EVERY_5_SECONDS)
+  @Cron(CronExpression.EVERY_5_SECONDS, { timeZone: 'Asia/Bangkok' })
   async closeExpiredRounds() {
     const expiredRounds = await this.prisma.matchRound.findMany({
       where: {
         status: MatchRoundStatus.ACTIVE,
-        endsAt: { lte: new Date() },
+        OR: [
+          { endsAt: { lte: new Date() } },
+          { submissions: { some: { status: SubmissionStatus.ACCEPTED } } },
+        ],
       },
       select: { id: true },
     });
@@ -277,17 +294,21 @@ export class MatchesService {
         where: {
           matchRoundId: round.id,
           status: SubmissionStatus.ACCEPTED,
-          evaluatedAt: { lte: round.endsAt },
+          createdAt: { lte: round.endsAt },
         },
-        orderBy: [{ evaluatedAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       });
       if (!acceptedBeforeDeadline && evaluatedAt < round.endsAt) return;
-      if (!acceptedBeforeDeadline) {
+      {
         const outstandingEvaluations = await tx.submission.count({
           where: {
             matchRoundId: round.id,
-            status: SubmissionStatus.EVALUATING,
-            createdAt: { lte: round.endsAt },
+            status: {
+              in: [SubmissionStatus.PENDING, SubmissionStatus.EVALUATING],
+            },
+            createdAt: {
+              lte: acceptedBeforeDeadline?.createdAt ?? round.endsAt,
+            },
           },
         });
         if (outstandingEvaluations > 0) return;
@@ -300,7 +321,7 @@ export class MatchesService {
           status: winnerId ? MatchRoundStatus.WON : MatchRoundStatus.DRAW,
           winnerId,
           completedAt: winnerId
-            ? acceptedBeforeDeadline.evaluatedAt
+            ? (acceptedBeforeDeadline?.createdAt ?? round.endsAt)
             : round.endsAt,
         },
       });
@@ -354,7 +375,7 @@ export class MatchesService {
     match: { id: string; playerOneId: string; playerTwoId: string },
     winnerId: string | null,
   ) {
-    const players = await tx.user.findMany({
+    const players = await tx.playerRating.findMany({
       where: { id: { in: [match.playerOneId, match.playerTwoId] } },
       select: { id: true, eloRating: true },
     });
@@ -376,11 +397,11 @@ export class MatchesService {
     const oneRating = playerOne.eloRating + oneRatingDelta;
     const twoRating = playerTwo.eloRating + twoRatingDelta;
 
-    await tx.user.update({
+    await tx.playerRating.update({
       where: { id: playerOne.id },
       data: { eloRating: oneRating, hasCompetitiveRating: true },
     });
-    await tx.user.update({
+    await tx.playerRating.update({
       where: { id: playerTwo.id },
       data: { eloRating: twoRating, hasCompetitiveRating: true },
     });

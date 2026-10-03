@@ -146,7 +146,7 @@ export function Notice({
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={`rounded-lg p-4 text-body-md ${tone === "error" ? "bg-error-container text-on-error-container" : "bg-sso-container text-sso"}`}
+      className={`rounded-lg p-4 text-body-md ${tone === "error" ? "bg-error-container text-on-error-container" : "bg-success/10 text-on-surface"}`}
     >
       {children}
     </div>
@@ -321,7 +321,7 @@ export function ConfirmDialog({
       onClick={(event) => {
         if (event.target === event.currentTarget && !busy) onCancel();
       }}
-      className="fixed inset-0 m-auto w-[calc(100%_-_2rem)] max-w-md rounded-xl border-0 bg-surface-container-lowest p-0 text-on-surface shadow-xl backdrop:bg-black/40"
+      className="fixed inset-0 m-auto w-[calc(100%_-_2rem)] max-w-md rounded-xl border-0 bg-surface-container-lowest p-0 text-on-surface shadow-xl backdrop:bg-on-surface/40"
     >
       <div className="space-y-5 p-6">
         <div className="flex items-start justify-between gap-3">
@@ -370,7 +370,7 @@ const submissionLabels: Record<string, string> = {
 export function SubmissionStatus({ status }: { status: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-label-sm ${status === "ACCEPTED" ? "bg-sso-container text-sso" : ["PENDING", "EVALUATING"].includes(status) ? "bg-primary-container/10 text-primary-container" : "bg-error-container text-on-error-container"}`}
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-label-sm ${status === "ACCEPTED" ? "bg-success/10 text-on-surface" : ["PENDING", "EVALUATING"].includes(status) ? "bg-primary-container/10 text-primary-container" : "bg-error-container text-on-error-container"}`}
     >
       <span className="h-2 w-2 rounded-full bg-current" aria-hidden="true" />
       {submissionLabels[status] ?? "ยังไม่มีผลตรวจ"}

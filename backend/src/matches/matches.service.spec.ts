@@ -57,7 +57,7 @@ describe('MatchesService', () => {
       problem: { findMany: jest.fn().mockResolvedValue(problems) },
     };
     const prisma = {
-      user: { upsert: jest.fn().mockResolvedValue(player) },
+      playerRating: { upsert: jest.fn().mockResolvedValue(player) },
       $transaction: jest.fn(
         (callback: (client: typeof transactionClient) => Promise<unknown>) =>
           callback(transactionClient),
@@ -195,12 +195,14 @@ describe('MatchesService', () => {
         count: jest.fn().mockResolvedValueOnce(2),
       },
       submission: {
+        count: jest.fn().mockResolvedValue(0),
         findFirst: jest.fn().mockResolvedValue({
           studentId: winner.id,
+          createdAt: new Date(),
           evaluatedAt: new Date(),
         }),
       },
-      user: {
+      playerRating: {
         findMany: jest.fn().mockResolvedValue([
           { id: winner.id, eloRating: 1200 },
           { id: player.id, eloRating: 1200 },
@@ -240,11 +242,11 @@ describe('MatchesService', () => {
       .get(MatchesService)
       .recordEvaluation('submission-id', new Date());
 
-    expect(transactionClient.user.update).toHaveBeenNthCalledWith(1, {
+    expect(transactionClient.playerRating.update).toHaveBeenNthCalledWith(1, {
       where: { id: winner.id },
       data: { eloRating: 1216, hasCompetitiveRating: true },
     });
-    expect(transactionClient.user.update).toHaveBeenNthCalledWith(2, {
+    expect(transactionClient.playerRating.update).toHaveBeenNthCalledWith(2, {
       where: { id: player.id },
       data: { eloRating: 1184, hasCompetitiveRating: true },
     });
@@ -308,7 +310,7 @@ describe('MatchesService', () => {
     expect(transactionClient.submission.count).toHaveBeenCalledWith({
       where: {
         matchRoundId: 'round-id',
-        status: 'EVALUATING',
+        status: { in: ['PENDING', 'EVALUATING'] },
         createdAt: { lte: roundEnd },
       },
     });

@@ -1,5 +1,7 @@
 "use client";
 
+import type { components } from "@/lib/api-schema";
+
 import {
   Button,
   Notice,
@@ -16,15 +18,9 @@ import {
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiRequestError, apiRequest } from "@/lib/api";
+import { ApiRequestError, apiRequest, apiCollection } from "@/lib/api";
 
-interface TestCase {
-  id: string;
-  problemId: string;
-  inputData: string;
-  expectedOutput: string;
-  isHidden: boolean;
-}
+type TestCase = components["schemas"]["TestCaseDto"];
 
 interface TestCaseForm {
   inputData: string;
@@ -32,9 +28,7 @@ interface TestCaseForm {
   isHidden: boolean;
 }
 
-interface Profile {
-  coreRole: string;
-}
+type Profile = components["schemas"]["MeDto"];
 
 const emptyForm: TestCaseForm = {
   inputData: "",
@@ -63,7 +57,7 @@ export default function TeacherTestCasesPage({
   const [pendingDelete, setPendingDelete] = useState<TestCase | null>(null);
 
   const loadTestCases = useCallback(async () => {
-    const result = await apiRequest<TestCase[]>(
+    const result = await apiCollection<TestCase>(
       `/api/v1/test-cases/problem/${problemId}`,
     );
     setTestCases(result);

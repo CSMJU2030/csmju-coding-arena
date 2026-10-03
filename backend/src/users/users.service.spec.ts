@@ -18,7 +18,7 @@ interface UserRecord {
 describe('UsersService', () => {
   let service: UsersService;
   let prismaMock: {
-    user: {
+    playerRating: {
       upsert: jest.Mock<Promise<UserRecord>, [UserUpsertArgs]>;
       findMany: jest.Mock<
         Promise<Array<{ displayName: string; eloRating: number }>>,
@@ -29,7 +29,7 @@ describe('UsersService', () => {
 
   beforeEach(async () => {
     prismaMock = {
-      user: {
+      playerRating: {
         upsert: jest.fn<Promise<UserRecord>, [UserUpsertArgs]>(),
         findMany: jest.fn<
           Promise<Array<{ displayName: string; eloRating: number }>>,
@@ -61,10 +61,10 @@ describe('UsersService', () => {
       displayName: 'Player-123456789abc',
       eloRating: 1200,
     };
-    prismaMock.user.upsert.mockResolvedValue(user);
+    prismaMock.playerRating.upsert.mockResolvedValue(user);
 
     await expect(service.ensureUser('core-user-1')).resolves.toBe(user);
-    const firstCall = prismaMock.user.upsert.mock.calls[0]?.[0];
+    const firstCall = prismaMock.playerRating.upsert.mock.calls[0]?.[0];
     if (!firstCall) throw new Error('User upsert was not called');
     expect(firstCall.where).toEqual({ coreUserId: 'core-user-1' });
     expect(firstCall.create.coreUserId).toBe('core-user-1');
@@ -72,14 +72,14 @@ describe('UsersService', () => {
   });
 
   it('returns only the top five competitive ratings', async () => {
-    prismaMock.user.findMany.mockResolvedValue([
+    prismaMock.playerRating.findMany.mockResolvedValue([
       { displayName: 'Player-A', eloRating: 1400 },
     ]);
 
     await expect(service.getLeaderboard()).resolves.toEqual([
       { rank: 1, displayName: 'Player-A', eloRating: 1400 },
     ]);
-    expect(prismaMock.user.findMany).toHaveBeenCalledWith({
+    expect(prismaMock.playerRating.findMany).toHaveBeenCalledWith({
       where: { hasCompetitiveRating: true },
       orderBy: [{ eloRating: 'desc' }, { id: 'asc' }],
       select: { displayName: true, eloRating: true },

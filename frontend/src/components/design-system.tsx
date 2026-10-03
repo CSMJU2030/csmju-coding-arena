@@ -4,7 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, renewSession } from "@/lib/api";
+import type { components } from "@/lib/api-schema";
 
 const navigation = [
   {
@@ -23,10 +24,7 @@ const navigation = [
   },
 ];
 
-interface ShellProfile {
-  coreRole: string;
-  displayName: string;
-}
+type ShellProfile = components["schemas"]["MeDto"];
 
 function NavigationIcon({ name }: { name: string }) {
   const commonProps = {
@@ -76,6 +74,17 @@ export function CsmjuAppShell({ children }: { children: ReactNode }) {
       active = false;
     };
   }, [pathname]);
+
+  useEffect(() => {
+    const expiresAt = profile?.session.expiresAt;
+    if (!expiresAt) return;
+    const delay = Math.max(
+      0,
+      new Date(expiresAt).getTime() - Date.now() - 60000,
+    );
+    const timer = window.setTimeout(renewSession, delay);
+    return () => window.clearTimeout(timer);
+  }, [profile]);
 
   useEffect(() => {
     if (!navOpen) return;
@@ -137,7 +146,7 @@ export function CsmjuAppShell({ children }: { children: ReactNode }) {
       {navOpen && (
         <button
           aria-label="ปิดเมนู"
-          className="fixed inset-0 z-20 bg-black/40 md:hidden"
+          className="fixed inset-0 z-20 bg-on-surface/40 md:hidden"
           onClick={() => setNavOpen(false)}
           type="button"
         />
@@ -155,13 +164,13 @@ export function CsmjuAppShell({ children }: { children: ReactNode }) {
           type="button"
           aria-label="ปิดเมนู"
           onClick={() => setNavOpen(false)}
-          className="ml-auto mr-4 min-h-11 min-w-11 rounded-lg text-white focus-visible:outline-2 focus-visible:outline-white md:hidden"
+          className="ml-auto mr-4 min-h-11 min-w-11 rounded-lg text-on-primary focus-visible:outline-2 focus-visible:outline-on-primary md:hidden"
         >
           ×
         </button>
         <div className="mb-8 px-4 pt-4">
           <Link
-            className="flex min-h-24 items-center justify-center rounded-xl bg-white p-4 text-center shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="flex min-h-24 items-center justify-center rounded-xl bg-on-primary p-4 text-center shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary"
             href="/"
             onClick={() => setNavOpen(false)}
           >
@@ -188,17 +197,17 @@ export function CsmjuAppShell({ children }: { children: ReactNode }) {
                   <li key={href}>
                     <Link
                       aria-current={active ? "page" : undefined}
-                      className={`flex min-h-12 items-center gap-3 py-3 text-white transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white ${
+                      className={`flex min-h-12 items-center gap-3 py-3 text-on-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-on-primary ${
                         active
-                          ? "border-l-4 border-accent bg-white/10 pl-6"
-                          : "pl-7 text-white/70 hover:bg-white/5 hover:text-white"
+                          ? "border-l-4 border-accent bg-on-primary/10 pl-6"
+                          : "pl-7 text-on-primary/70 hover:bg-on-primary/5 hover:text-on-primary"
                       }`}
                       href={href}
                       onClick={() => setNavOpen(false)}
                     >
                       <NavigationIcon name={icon} />
                       <span className="text-label-md">{label}</span>
-                      <span className="text-caption text-white/50">
+                      <span className="text-caption text-on-primary/50">
                         {labelEn}
                       </span>
                     </Link>
@@ -211,7 +220,7 @@ export function CsmjuAppShell({ children }: { children: ReactNode }) {
           <form action="/auth/logout" method="POST" className="px-4 pt-4">
             <button
               type="submit"
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 py-3 text-label-md text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-on-primary/25 bg-on-primary/10 px-4 py-3 text-label-md text-on-primary backdrop-blur-sm transition-colors hover:bg-on-primary/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary"
             >
               <svg
                 aria-hidden="true"
@@ -267,14 +276,14 @@ export function CsmjuAppShell({ children }: { children: ReactNode }) {
                 </svg>
               )}
             </button>
-            <span className="text-gradient font-display text-label-md sm:text-headline-md">
+            <span className="text-primary-container font-display text-label-md sm:text-headline-md">
               Coding Arena
             </span>
           </div>
 
           <Link
             href="/"
-            className="hidden min-h-11 items-center text-gradient font-display text-headline-md focus-visible:outline-2 focus-visible:outline-primary-container md:flex"
+            className="hidden min-h-11 items-center text-primary-container font-display text-headline-md focus-visible:outline-2 focus-visible:outline-primary-container md:flex"
           >
             Coding Arena
           </Link>
@@ -286,7 +295,9 @@ export function CsmjuAppShell({ children }: { children: ReactNode }) {
               </span>
               <div className="hidden min-w-0 pr-2 sm:block">
                 <p className="max-w-48 truncate text-label-md text-on-surface">
-                  {profile.displayName}
+                  {profile.coreRole === "lecturer"
+                    ? "อาจารย์"
+                    : "ผู้เข้าแข่งขัน"}
                 </p>
                 <p className="mt-1 text-label-sm">
                   {profile.coreRole === "lecturer"

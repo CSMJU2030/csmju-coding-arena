@@ -1,6 +1,6 @@
 import { config as loadEnv } from 'dotenv';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { PrismaClient } from '../generated/prisma/client';
 import { getDatabaseUrl } from '../src/prisma/database-url';
 
 loadEnv({ path: '.env.local' });
@@ -13,8 +13,8 @@ const prisma = new PrismaClient({
 async function main() {
   console.log('🌱 เริ่มทำการ Seed ข้อมูล...');
 
-  // 1. สร้างบัญชีผู้สอนสำหรับข้อมูลตัวอย่าง
-  const teacher = await prisma.user.upsert({
+  // ผู้เขียนโจทย์จำลองสำหรับ development; รายการนี้ใช้เข้าสู่ระบบไม่ได้
+  const teacher = await prisma.playerRating.upsert({
     where: { coreUserId: 'seed-lecturer' },
     update: {},
     create: {
@@ -23,7 +23,7 @@ async function main() {
       eloRating: 1500,
     },
   });
-  console.log(`👤 สร้างบัญชีอาจารย์: ${teacher.displayName}`);
+  console.log(`สร้างผู้เขียนโจทย์ตัวอย่าง: ${teacher.displayName}`);
 
   // 2. ข้อมูลโจทย์จำลอง 10 ข้อ พร้อม Test Cases
   const problemsData = [

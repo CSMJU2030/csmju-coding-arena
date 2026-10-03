@@ -1,3 +1,5 @@
+import type { Prisma } from '../../generated/prisma/client';
+import { withCompetitionLock } from '../matches/competition-lock';
 import {
   ConflictException,
   Injectable,
@@ -6,6 +8,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { CreateProblemDto, UpdateProblemDto } from './dto/create-problem.dto';
+import {
+  PaginationQueryDto,
+  buildPaginationMeta,
+} from '../common/dto/pagination.dto';
+import { CollectionResult } from '../common/api-response';
 
 @Injectable()
 export class ProblemsService {
@@ -28,42 +35,65 @@ export class ProblemsService {
     });
   }
 
-  async findAllActive() {
-    return this.prisma.problem.findMany({
-      where: { isActive: true },
-      select: { id: true, title: true, timeLimitMs: true },
-    });
+  async findAllActive(query = new PaginationQueryDto()) {
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.problem.findMany({
+        where: { isActive: true },
+        select: { id: true, title: true, timeLimitMs: true },
+        orderBy: [{ title: 'asc' }, { id: 'asc' }],
+        skip: query.skip,
+        take: query.take,
+      }),
+      this.prisma.problem.count({ where: { isActive: true } }),
+    ]);
+    return new CollectionResult(
+      data,
+      buildPaginationMeta(total, query.page ?? 1, query.take),
+    );
   }
 
-  async findAll() {
-    return this.prisma.problem.findMany({
-      orderBy: { title: 'asc' },
-      include: { _count: { select: { testCases: true } } },
-    });
+  async findAll(query = new PaginationQueryDto()) {
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.problem.findMany({
+        orderBy: [{ title: 'asc' }, { id: 'asc' }],
+        skip: query.skip,
+        take: query.take,
+        include: { _count: { select: { testCases: true } } },
+      }),
+      this.prisma.problem.count(),
+    ]);
+    return new CollectionResult(
+      data,
+      buildPaginationMeta(total, query.page ?? 1, query.take),
+    );
   }
 
   async update(id: string, dto: UpdateProblemDto) {
-    await this.assertNotInActiveMatch(id);
-    const result = await this.prisma.problem.updateMany({
-      where: { id },
-      data: dto,
+    return withCompetitionLock(this.prisma, async (tx) => {
+      await this.assertNotInActiveMatch(id, tx);
+      const result = await tx.problem.updateMany({
+        where: { id },
+        data: dto,
+      });
+      if (!result.count) {
+        throw new NotFoundException('Problem not found');
+      }
+      return tx.problem.findUniqueOrThrow({ where: { id } });
     });
-    if (!result.count) {
-      throw new NotFoundException('Problem not found');
-    }
-    return this.prisma.problem.findUniqueOrThrow({ where: { id } });
   }
 
   async deactivate(id: string) {
-    await this.assertNotInActiveMatch(id);
-    const result = await this.prisma.problem.updateMany({
-      where: { id },
-      data: { isActive: false },
+    return withCompetitionLock(this.prisma, async (tx) => {
+      await this.assertNotInActiveMatch(id, tx);
+      const result = await tx.problem.updateMany({
+        where: { id },
+        data: { isActive: false },
+      });
+      if (!result.count) {
+        throw new NotFoundException('Problem not found');
+      }
+      return { id, deleted: true };
     });
-    if (!result.count) {
-      throw new NotFoundException('Problem not found');
-    }
-    return { id, isActive: false };
   }
 
   async findOne(id: string) {
@@ -79,8 +109,11 @@ export class ProblemsService {
     return problem;
   }
 
-  private async assertNotInActiveMatch(id: string) {
-    const activeMatchRound = await this.prisma.matchRound.findFirst({
+  private async assertNotInActiveMatch(
+    id: string,
+    tx: Prisma.TransactionClient,
+  ) {
+    const activeMatchRound = await tx.matchRound.findFirst({
       where: { problemId: id, match: { status: 'ACTIVE' } },
       select: { id: true },
     });
