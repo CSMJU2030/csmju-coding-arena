@@ -120,6 +120,8 @@ model Match {
   id          String      @id @default(uuid())
   playerOneId String      @map("player_one_id")
   playerTwoId String      @map("player_two_id")
+  readyPlayerOneAt DateTime? @map("ready_player_one_at")
+  readyPlayerTwoAt DateTime? @map("ready_player_two_at")
   winnerId    String?     @map("winner_id")
   status      MatchStatus @default(ACTIVE)
   createdAt   DateTime    @default(now()) @map("created_at")

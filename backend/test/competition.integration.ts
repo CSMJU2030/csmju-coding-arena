@@ -61,6 +61,10 @@ async function main() {
     assert.equal(paired.state, 'matched');
     matchId = 'id' in paired ? paired.id : undefined;
     assert.ok(matchId);
+    const firstReady = await matches.markReady(matchId, one.coreUserId);
+    assert.equal(firstReady.currentRound, null);
+    const started = await matches.markReady(matchId, two.coreUserId);
+    assert.equal(started.currentRound, 1);
     const state = await matches.getMatch(matchId, one.coreUserId);
     const assignments = await db.matchRound.findMany({ where: { matchId } });
     assert.equal(new Set(assignments.map((round) => round.problemId)).size, 3);

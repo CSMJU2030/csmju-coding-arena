@@ -35,7 +35,9 @@ The frontend runs at `http://localhost:3202` and the API at
 so the subsystem's HttpOnly SSO cookie remains available to browser requests.
 
 Students enter a FIFO matchmaking queue. Each match gets three distinct random
-active problems with test cases, shared by both players; each round lasts ten
+active problems with test cases, shared by both players. The first-round clock
+starts only after both players have loaded the match page, so matchmaking or
+navigation delays do not reduce either player's time. Each round lasts ten
 minutes and the first accepted solution wins the round. The first player to win
 two rounds wins the match. Elo uses the standard K=32 calculation, and the
 student leaderboard displays the top five rated competitors. Lecturers can

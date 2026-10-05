@@ -111,7 +111,7 @@ export default function StudentDashboard() {
             : "ตรวจสอบสถานะคิวไม่สำเร็จ",
         );
       });
-    }, 10_000);
+    }, 1_500);
     return () => window.clearInterval(interval);
   }, [queue.state, refreshQueue]);
 

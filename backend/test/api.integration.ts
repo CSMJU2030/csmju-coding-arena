@@ -33,6 +33,11 @@ async function main() {
     role: 'student',
     azp: 'csmju-coding-arena',
   });
+  const secondStudent = await signCoreHubToken(key, {
+    sub: prefix + '-student-two',
+    role: 'student',
+    azp: 'csmju-coding-arena',
+  });
   const app = await NestFactory.create(AppModule, { logger: false });
   app.setGlobalPrefix('api', {
     exclude: [
@@ -52,6 +57,7 @@ async function main() {
   const base = await app.getUrl();
   const db = app.get(PrismaService);
   const ids: string[] = [];
+  let matchId: string | undefined;
   type Envelope<T> = {
     success: boolean;
     data: T;
@@ -171,10 +177,51 @@ async function main() {
     );
     assert.equal(deleted.res.status, 200);
     assert.equal(deleted.json.data.deleted, true);
+
+    for (const problemId of ids) {
+      const testCase = await request<{ id: string }>(
+        '/api/v1/test-cases',
+        teacher,
+        'POST',
+        { problemId, inputData: '2 3', expectedOutput: '5', isHidden: true },
+      );
+      assert.equal(testCase.res.status, 201);
+    }
+
     assert.equal(
       (await request('/api/v1/matches/current', teacher)).res.status,
       403,
     );
+    const waiting = await request<{ state: string }>(
+      '/api/v1/matches/queue',
+      student,
+      'POST',
+    );
+    assert.equal(waiting.res.status, 201);
+    assert.equal(waiting.json.data.state, 'waiting');
+    const paired = await request<{
+      id: string;
+      state: string;
+      currentRound: number | null;
+    }>('/api/v1/matches/queue', secondStudent, 'POST');
+    assert.equal(paired.res.status, 201);
+    assert.equal(paired.json.data.state, 'matched');
+    matchId = paired.json.data.id;
+    const readyOne = await request<{ currentRound: number | null }>(
+      `/api/v1/matches/${matchId}/ready`,
+      student,
+      'POST',
+    );
+    assert.equal(readyOne.res.status, 200);
+    assert.equal(readyOne.json.data.currentRound, null);
+    const readyTwo = await request<{ currentRound: number | null }>(
+      `/api/v1/matches/${matchId}/ready`,
+      secondStudent,
+      'POST',
+    );
+    assert.equal(readyTwo.res.status, 200);
+    assert.equal(readyTwo.json.data.currentRound, 1);
+
     const admin = await signCoreHubToken(key, {
       role: 'admin',
       azp: 'csmju-coding-arena',
@@ -191,9 +238,13 @@ async function main() {
       401,
     );
     console.log(
-      'PASS: real HTTP API, RS256/JWKS fixture, role separation, validation, pagination, hidden-test denial, teacher CRUD, delete envelope, unknown-role denial, SSO state protection',
+      'PASS: real HTTP API, RS256/JWKS fixture, role separation, validation, pagination, hidden-test denial, teacher CRUD, delete envelope, match readiness gate, unknown-role denial, SSO state protection',
     );
   } finally {
+    if (matchId) await db.match.deleteMany({ where: { id: matchId } });
+    await db.matchQueue.deleteMany({
+      where: { player: { coreUserId: { startsWith: prefix } } },
+    });
     await db.testCase.deleteMany({ where: { problemId: { in: ids } } });
     await db.problem.deleteMany({ where: { id: { in: ids } } });
     await db.playerRating.deleteMany({

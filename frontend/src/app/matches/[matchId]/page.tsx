@@ -41,14 +41,50 @@ export default function MatchPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [successNotice, setSuccessNotice] = useState("");
   const [now, setNow] = useState(0);
   const [loadStatus, setLoadStatus] = useState(0);
+  const matchSnapshot = useRef<MatchData | null>(null);
+  const readySent = useRef(false);
 
   const refreshMatch = useCallback(async () => {
-    const updated = await apiRequest<MatchData>(`/api/v1/matches/${matchId}`);
+    let updated = await apiRequest<MatchData>(`/api/v1/matches/${matchId}`);
+    if (
+      updated.status === "ACTIVE" &&
+      updated.currentRound === null &&
+      !readySent.current
+    ) {
+      readySent.current = true;
+      try {
+        updated = await apiRequest<MatchData>(
+          `/api/v1/matches/${matchId}/ready`,
+          { method: "POST" },
+        );
+      } catch (error) {
+        readySent.current = false;
+        throw error;
+      }
+    }
+
     const activeRound = updated.rounds.find(
       (item) => item.roundNumber === updated.currentRound,
     );
+    const previousRoundNumber = matchSnapshot.current?.currentRound;
+    if (previousRoundNumber !== undefined && previousRoundNumber !== null) {
+      const resolvedRound = updated.rounds.find(
+        (item) => item.roundNumber === previousRoundNumber,
+      );
+      if (resolvedRound?.submissions[0]?.status === "ACCEPTED") {
+        setSuccessNotice(
+          `ถูกต้อง! คำตอบผ่านและคุณชนะโจทย์ที่ ${previousRoundNumber}`,
+        );
+      }
+    }
+    if (activeRound?.submissions[0]?.status === "ACCEPTED") {
+      setSuccessNotice(
+        `ถูกต้อง! ระบบรับคำตอบของคุณสำหรับโจทย์ที่ ${activeRound.roundNumber}`,
+      );
+    }
     if (activeRound && activeRound.id !== draftRound.current) {
       setCode(
         sessionStorage.getItem(
@@ -58,6 +94,7 @@ export default function MatchPage() {
       draftRound.current = activeRound.id;
       setNotice("");
     }
+    matchSnapshot.current = updated;
     setMatch(updated);
   }, [matchId]);
 
@@ -83,7 +120,7 @@ export default function MatchPage() {
             : "ตรวจสอบการแข่งขันไม่สำเร็จ",
         );
       });
-    }, 8_000);
+    }, 1_500);
     const clock = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => {
       window.clearTimeout(loadInitial);
@@ -100,6 +137,7 @@ export default function MatchPage() {
     setBusy(true);
     setError("");
     setNotice("");
+    setSuccessNotice("");
     try {
       await apiRequest(`/api/v1/matches/${matchId}/submissions`, {
         method: "POST",
@@ -214,6 +252,18 @@ export default function MatchPage() {
             กลับไปสนามและดูอันดับ
           </Link>
         </article>
+      ) : match.currentRound === null ? (
+        <article
+          className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-8 text-center shadow-sm"
+          role="status"
+        >
+          <h2 className="font-display text-headline-md text-on-surface">
+            รอคู่แข่งพร้อมเข้าสนาม
+          </h2>
+          <p className="mt-2 text-body-md text-on-surface-variant">
+            ระบบจะเริ่มจับเวลา 10 นาทีเมื่อผู้เล่นทั้งสองคนเปิดสนามแล้ว
+          </p>
+        </article>
       ) : round ? (
         <article className="space-y-5 rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4 shadow-sm md:p-6">
           <header className="flex flex-wrap items-center justify-between gap-3">
@@ -245,6 +295,9 @@ export default function MatchPage() {
             <p className="text-label-md text-primary" role="status">
               {notice}
             </p>
+          ) : null}
+          {successNotice ? (
+            <Notice tone="success">{successNotice}</Notice>
           ) : null}
           {myLatestSubmission ? (
             <p className="text-label-md text-on-surface-variant" role="status">
