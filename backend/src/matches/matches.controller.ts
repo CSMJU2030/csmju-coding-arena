@@ -5,6 +5,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -65,5 +67,15 @@ export class MatchesController {
       dto.problemId,
       dto.sourceCode,
     );
+  }
+
+  @Post(':matchId/ready')
+  @HttpCode(HttpStatus.OK)
+  @ApiResult(MatchDto, false, 200)
+  markReady(
+    @Param('matchId', new ParseUUIDPipe({ version: '4' })) matchId: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.matchesService.markReady(matchId, request.user.id);
   }
 }

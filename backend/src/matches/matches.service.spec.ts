@@ -143,20 +143,24 @@ describe('MatchesService', () => {
     expect(transactionClient.match.create).not.toHaveBeenCalled();
   });
 
-  it('creates a shared match with three distinct random problem assignments', async () => {
+  it('creates a shared match but does not start the clock before both players are ready', async () => {
     const { service, transactionClient, getCreatedMatchData } =
       await createService(true);
 
     await expect(service.joinQueue(player.coreUserId)).resolves.toMatchObject({
       state: 'matched',
       id: 'match-id',
-      currentRound: 1,
+      currentRound: null,
+      rounds: [],
     });
-    const assigned = getCreatedMatchData()?.rounds.create.map(
-      (round) => round.problemId,
-    );
+    const createdRounds = getCreatedMatchData()?.rounds.create ?? [];
+    const assigned = createdRounds.map((round) => round.problemId);
     expect(assigned).toHaveLength(3);
     expect(new Set(assigned).size).toBe(3);
+    expect(createdRounds.every((round) => round.status === 'PENDING')).toBe(
+      true,
+    );
+    expect(createdRounds.every((round) => round.endsAt === null)).toBe(true);
     expect(transactionClient.matchQueue.deleteMany).toHaveBeenCalledTimes(1);
   });
 

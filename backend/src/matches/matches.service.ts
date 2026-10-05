@@ -65,7 +65,6 @@ export class MatchesService {
       }
 
       const selectedProblems = this.randomSample(problems, 3);
-      const now = new Date();
       const match = await tx.match.create({
         data: {
           playerOneId: opponent.playerId,
@@ -74,14 +73,8 @@ export class MatchesService {
             create: selectedProblems.map((problem, index) => ({
               problemId: problem.id,
               roundNumber: index + 1,
-              status:
-                index === 0
-                  ? MatchRoundStatus.ACTIVE
-                  : MatchRoundStatus.PENDING,
-              endsAt:
-                index === 0
-                  ? new Date(now.getTime() + ROUND_DURATION_MS)
-                  : null,
+              status: MatchRoundStatus.PENDING,
+              endsAt: null,
             })),
           },
         },
@@ -94,6 +87,60 @@ export class MatchesService {
     });
 
     return this.getCurrent(coreUserId);
+  }
+
+  async markReady(matchId: string, coreUserId: string) {
+    const user = await this.usersService.ensureUser(coreUserId);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM matches WHERE id = ${matchId} FOR UPDATE`;
+      const match = await tx.match.findUnique({
+        where: { id: matchId },
+        select: {
+          playerOneId: true,
+          playerTwoId: true,
+          readyPlayerOneAt: true,
+          readyPlayerTwoAt: true,
+          status: true,
+        },
+      });
+      if (!match) throw new NotFoundException('Match not found');
+      if (match.playerOneId !== user.id && match.playerTwoId !== user.id) {
+        throw new ForbiddenException('You are not a participant in this match');
+      }
+      if (match.status !== MatchStatus.ACTIVE) return;
+
+      const readyAt = new Date();
+      const updated = await tx.match.update({
+        where: { id: matchId },
+        data:
+          match.playerOneId === user.id
+            ? { readyPlayerOneAt: match.readyPlayerOneAt ?? readyAt }
+            : { readyPlayerTwoAt: match.readyPlayerTwoAt ?? readyAt },
+        select: { readyPlayerOneAt: true, readyPlayerTwoAt: true },
+      });
+
+      if (updated.readyPlayerOneAt && updated.readyPlayerTwoAt) {
+        const firstRound = await tx.matchRound.findFirst({
+          where: {
+            matchId,
+            roundNumber: 1,
+            status: MatchRoundStatus.PENDING,
+          },
+        });
+        if (firstRound) {
+          await tx.matchRound.update({
+            where: { id: firstRound.id },
+            data: {
+              status: MatchRoundStatus.ACTIVE,
+              endsAt: new Date(Date.now() + ROUND_DURATION_MS),
+            },
+          });
+        }
+      }
+    });
+
+    return this.getMatch(matchId, coreUserId);
   }
 
   async leaveQueue(coreUserId: string) {
