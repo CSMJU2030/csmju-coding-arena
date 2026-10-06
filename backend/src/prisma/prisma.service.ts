@@ -12,6 +12,7 @@ export class PrismaService
     super({
       adapter: new PrismaPg({
         connectionString: getDatabaseUrl() ?? '',
+        max: Number(process.env.DATABASE_POOL_MAX) || 5,
       }),
     });
   }

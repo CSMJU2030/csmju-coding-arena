@@ -22,7 +22,9 @@ except subprocess.TimeoutExpired:
 @Injectable()
 export class SandboxRunner {
   async run(code: string, input: string, timeLimitMs: number): Promise<string> {
-    const image = process.env.JUDGE_IMAGE ?? 'python:3.12-alpine';
+    const image =
+      process.env.JUDGE_IMAGE ??
+      'python:3.12-alpine@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4';
     const name = `coding-arena-judge-${randomUUID()}`;
     const args = [
       'run',

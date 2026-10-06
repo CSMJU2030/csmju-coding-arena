@@ -3,7 +3,7 @@
 Coding Arena — ระบบย่อยของโครงการ CSMJU2030
 
 มาตรฐานกลางอยู่ใน `standards/` (submodule ของ CSMJU2030/csmju2030-standards)
-ใช้ standards v1.7.0 ตาม `.standards-version`
+ใช้ standards v1.8.1 ตาม `.standards-version`
 
 ## เปิดระบบในเครื่อง
 
@@ -27,6 +27,23 @@ pnpm dev
 
 เปิด `http://localhost:3202` การเข้าสู่ระบบจะส่งไป Core Hub ไม่มีบัญชีหรือรหัสผ่านใน Coding Arena
 ตัวตรวจคำตอบต้องเข้าถึง Docker ได้ หาก Docker ไม่พร้อม คำตอบจะคงสถานะรอตรวจและลองใหม่โดยไม่ตัดสินแพ้
+
+## ทดลองรันแบบ container ตามมาตรฐาน deploy
+
+คำสั่งนี้ build และเริ่ม PostgreSQL, API และ web ตาม production layout โดย web เปิดที่พอร์ต 3202
+และฐานข้อมูลเดิมจะเก็บอยู่ใน Docker volume:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs --tail=100 api
+```
+
+ทั้งสาม service ต้อง healthy ก่อนลอง login ผ่าน `http://localhost:3202` ใน Chrome
+หยุด container โดยเก็บข้อมูลไว้ด้วย `docker compose down` (อย่าใช้ `-v` หากต้องการเก็บฐานข้อมูล)
+
+บน server, DevOps ต้องกำหนด `DOCKER_HOST` ให้ API ชี้ไปยัง Docker daemon แบบ rootless ที่จัดไว้สำหรับรันโค้ด
+ห้ามเชื่อม `/var/run/docker.sock` ของ daemon หลักเข้ากับ API container; ใช้ค่า `JUDGE_IMAGE` ที่ปักหมุด digest ไว้
 
 ## ลงทะเบียนใน Core Hub
 
