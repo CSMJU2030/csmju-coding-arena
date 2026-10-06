@@ -42,6 +42,9 @@ docker compose logs --tail=100 api
 ทั้งสาม service ต้อง healthy ก่อนลอง login ผ่าน `http://localhost:3202` ใน Chrome
 หยุด container โดยเก็บข้อมูลไว้ด้วย `docker compose down` (อย่าใช้ `-v` หากต้องการเก็บฐานข้อมูล)
 
+บน server, DevOps ต้องกำหนด `DOCKER_HOST` ให้ API ชี้ไปยัง Docker daemon แบบ rootless ที่จัดไว้สำหรับรันโค้ด
+ห้ามเชื่อม `/var/run/docker.sock` ของ daemon หลักเข้ากับ API container; ใช้ค่า `JUDGE_IMAGE` ที่ปักหมุด digest ไว้
+
 ## ลงทะเบียนใน Core Hub
 
 ระบบนี้ยังไม่ได้ลงทะเบียนและเปิดใช้งาน ต้องให้เจ้าของระบบลงทะเบียนและผู้ดูแลอนุมัติก่อนทดสอบ SSO จริง

@@ -21,7 +21,9 @@ async function main() {
   await core.start([key]);
   process.env.CORE_HUB_JWKS_URL = core.jwksUrl;
   process.env.CORE_HUB_URL = core.url;
-  process.env.CORE_HUB_WEB_URL = core.url;
+  // A trailing slash is common in server environment values. Logout and SSO
+  // redirects must not turn it into a double-slash path on Core Hub.
+  process.env.CORE_HUB_WEB_URL = `${core.url}/`;
   const prefix = `http-test-${randomUUID()}`;
   const teacher = await signCoreHubToken(key, {
     sub: prefix + '-teacher',
@@ -232,6 +234,12 @@ async function main() {
     });
     assert.equal(login.status, 302);
     assert.ok(login.headers.get('set-cookie')?.includes('HttpOnly'));
+    const logout = await fetch(base + '/auth/logout', {
+      method: 'POST',
+      redirect: 'manual',
+    });
+    assert.equal(logout.status, 303);
+    assert.equal(logout.headers.get('location'), `${core.url}/logout`);
     assert.equal(
       (await request('/auth/callback?access_token=invalid&state=invalid')).res
         .status,

@@ -87,7 +87,9 @@ export class SsoController {
   }
 
   private get coreHubWebUrl(): string {
-    return this.config.get<string>('coreHub.webUrl', 'http://localhost:3100');
+    return this.config
+      .get<string>('coreHub.webUrl', 'http://localhost:3100')
+      .replace(/\/+$/, '');
   }
 
   private get secure(): boolean {
