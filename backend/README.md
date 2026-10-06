@@ -34,6 +34,10 @@ The frontend runs at `http://localhost:3202` and the API at
 `http://localhost:4202`. The frontend proxies `/api/*` and `/auth/*` to the API
 so the subsystem's HttpOnly SSO cookie remains available to browser requests.
 
+The deployment containers use the internal service ports web `3000` and API `4000`;
+only the web service is exposed on `127.0.0.1:3202`. Configure `DATABASE_POOL_MAX`
+to cap Prisma's PostgreSQL pool (default `5`).
+
 Students enter a FIFO matchmaking queue. Each match gets three distinct random
 active problems with test cases, shared by both players. The first-round clock
 starts only after both players have loaded the match page, so matchmaking or

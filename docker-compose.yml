@@ -1,5 +1,12 @@
+# Local deployment rehearsal. The production server uses the same web/api images
+# with a centrally managed PostgreSQL database and its own environment file.
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
     container_name: coding-arena-postgres
     restart: unless-stopped
@@ -8,14 +15,75 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: csmju_coding_arena_db
     ports:
-      - "127.0.0.1:5433:5432"
+      - '127.0.0.1:5433:5432'
     volumes:
       - coding_arena_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d csmju_coding_arena_db"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d csmju_coding_arena_db']
       interval: 5s
       timeout: 5s
       retries: 10
+
+  api:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: coding-arena-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/csmju_coding_arena_db
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-5}
+      CORE_HUB_URL: ${CORE_HUB_URL:-https://csmju2030.jowave.com}
+      CORE_HUB_JWKS_URL: ${CORE_HUB_JWKS_URL:-https://csmju2030.jowave.com/api/v1/.well-known/jwks.json}
+      CORE_HUB_WEB_URL: ${CORE_HUB_WEB_URL:-https://csmju2030.jowave.com}
+      CORE_HUB_ISSUER: ${CORE_HUB_ISSUER:-core-hub}
+      CORE_HUB_AUDIENCE: ${CORE_HUB_AUDIENCE:-csmju2030}
+      SUBSYSTEM_ID: ${SUBSYSTEM_ID:-csmju-coding-arena}
+      SUBSYSTEM_NAME: ${SUBSYSTEM_NAME:-Coding Arena}
+      JUDGE_IMAGE: ${JUDGE_IMAGE:-python:3.12-alpine}
+      TZ: Asia/Bangkok
+    tmpfs:
+      - /tmp:size=32m
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  web:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: coding-arena-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    tmpfs:
+      - /tmp:size=32m
+      - /app/frontend/.next/cache:size=64m
+    environment:
+      CORE_HUB_WEB_URL: ${CORE_HUB_WEB_URL:-https://csmju2030.jowave.com}
+      SUBSYSTEM_ID: ${SUBSYSTEM_ID:-csmju-coding-arena}
+      TZ: Asia/Bangkok
+    ports:
+      - '127.0.0.1:3202:3000'
 
 volumes:
   coding_arena_postgres_data:
