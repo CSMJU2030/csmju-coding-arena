@@ -33,8 +33,9 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    PORT=4000
-# Client only. DevOps provides DOCKER_HOST for the dedicated rootless daemon;
+    PORT=4000 \
+    DOCKER_CONFIG=/tmp/.docker
+# Client only. Set DOCKER_HOST only after the dedicated rootless daemon is configured;
 # never mount the server's privileged /var/run/docker.sock into this container.
 RUN apk add --no-cache docker-cli \
  && corepack enable pnpm
