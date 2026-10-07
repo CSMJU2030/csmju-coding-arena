@@ -42,8 +42,14 @@ docker compose logs --tail=100 api
 ทั้งสาม service ต้อง healthy ก่อนลอง login ผ่าน `http://localhost:3202` ใน Chrome
 หยุด container โดยเก็บข้อมูลไว้ด้วย `docker compose down` (อย่าใช้ `-v` หากต้องการเก็บฐานข้อมูล)
 
-บน server, DevOps ต้องกำหนด `DOCKER_HOST` ให้ API ชี้ไปยัง Docker daemon แบบ rootless ที่จัดไว้สำหรับรันโค้ด
-ห้ามเชื่อม `/var/run/docker.sock` ของ daemon หลักเข้ากับ API container; ใช้ค่า `JUDGE_IMAGE` ที่ปักหมุด digest ไว้
+ถ้าต้องการทดสอบตัวตรวจโค้ดจาก API container ในเครื่อง ให้ใช้ compose override นี้แทน (ใช้ Docker socket เฉพาะ Docker Desktop ในเครื่อง):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local-judge.yml up -d --build
+```
+
+ก่อนเปิดใช้การตรวจโค้ดบน server ต้องได้รับอนุมัติจาก PM และให้ DevOps จัด Docker daemon แบบ rootless สำหรับงานนี้
+แล้วกำหนด `DOCKER_HOST` และเตรียม image `JUDGE_IMAGE` ที่ปักหมุด digest ไว้ ห้ามเชื่อม `/var/run/docker.sock` ของ daemon หลักเข้ากับ API container
 
 ## ลงทะเบียนใน Core Hub
 

@@ -41,6 +41,7 @@ export class SandboxRunner {
       '--memory-swap=128m',
       '--cpus=1',
       '--pids-limit=32',
+      '--ulimit=nofile=64:64',
       '--tmpfs=/tmp:rw,noexec,nosuid,size=16m',
       '-i',
       image,

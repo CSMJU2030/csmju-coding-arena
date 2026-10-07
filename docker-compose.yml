@@ -1,15 +1,23 @@
 # Local deployment rehearsal. The production server uses the same web/api images
 # with a centrally managed PostgreSQL database and its own environment file.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
 x-hardening: &hardening
   read_only: true
   cap_drop: [ALL]
   security_opt: ['no-new-privileges:true']
+  logging: *logging
 
 services:
   db:
     image: postgres:16-alpine
     container_name: coding-arena-postgres
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -46,12 +54,13 @@ services:
       CORE_HUB_AUDIENCE: ${CORE_HUB_AUDIENCE:-csmju2030}
       SUBSYSTEM_ID: ${SUBSYSTEM_ID:-csmju-coding-arena}
       SUBSYSTEM_NAME: ${SUBSYSTEM_NAME:-Coding Arena}
-      # Supplied by DevOps on the server; points to the dedicated rootless daemon.
+      # Set by DevOps only after the dedicated rootless judge daemon is configured.
       DOCKER_HOST: ${DOCKER_HOST:-}
       JUDGE_IMAGE: ${JUDGE_IMAGE:-python:3.12-alpine@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4}
       TZ: Asia/Bangkok
     tmpfs:
       - /tmp:size=32m
+    mem_limit: 512m
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     healthcheck:
@@ -86,6 +95,7 @@ services:
       TZ: Asia/Bangkok
     ports:
       - '127.0.0.1:3202:3000'
+    mem_limit: 384m
 
 volumes:
   coding_arena_postgres_data:
