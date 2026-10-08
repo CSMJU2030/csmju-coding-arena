@@ -308,38 +308,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/languages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["LanguagesController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/code-runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CodeRunsController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/level-clears": {
         parameters: {
             query?: never;
@@ -494,36 +462,6 @@ export interface components {
         CreateMatchSubmissionDto: {
             problemId: string;
             sourceCode: string;
-        };
-        LanguageDto: {
-            id: string;
-            name: string;
-            /** @enum {string} */
-            category: "popular" | "systems" | "jvm" | "dotnet" | "scripting" | "shell" | "functional" | "lisp" | "logic" | "classic" | "esoteric" | "web" | "data";
-            file: string;
-            extension: string;
-            /** @enum {string} */
-            runtime: "sandbox" | "browser";
-            compiled: boolean;
-            template: string;
-            stdin: string;
-        };
-        CodeRunDto: {
-            language: string;
-            /** @enum {string} */
-            status: "OK" | "COMPILE_ERROR" | "RUNTIME_ERROR" | "TIME_LIMIT_EXCEEDED" | "OUTPUT_LIMIT_EXCEEDED" | "MEMORY_LIMIT_EXCEEDED";
-            exitCode: number | null;
-            stdout: string;
-            stderr: string;
-            compileOutput: string;
-            timeMs: number;
-            truncated?: boolean;
-        };
-        CreateCodeRunDto: {
-            /** @example python */
-            language: string;
-            code: string;
-            stdin?: string;
         };
         LevelClearDto: {
             id: string;
@@ -1171,62 +1109,6 @@ export interface operations {
                         /** @enum {boolean} */
                         success: true;
                         data: components["schemas"]["MatchDto"];
-                    };
-                };
-            };
-        };
-    };
-    LanguagesController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @enum {boolean} */
-                        success: true;
-                        data: components["schemas"]["LanguageDto"][];
-                        meta: {
-                            total: number;
-                            page: number;
-                            limit: number;
-                            totalPages: number;
-                        };
-                    };
-                };
-            };
-        };
-    };
-    CodeRunsController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCodeRunDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @enum {boolean} */
-                        success: true;
-                        data: components["schemas"]["CodeRunDto"];
                     };
                 };
             };

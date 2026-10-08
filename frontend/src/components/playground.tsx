@@ -4,20 +4,8 @@ import { Clock3, Play, RotateCcw, ShieldCheck } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CodePad } from "@/components/code-pad";
-import { ErrorState, LoadingState } from "@/components/ui";
-import { ApiRequestError } from "@/lib/api";
 import { runJavaScriptInBrowser } from "@/lib/browser-run";
-import {
-  CATEGORY_LABELS,
-  CATEGORY_ORDER,
-  loadDraft,
-  runOnServer,
-  saveDraft,
-  STATUS_LABELS,
-  useLanguages,
-  type Language,
-  type RunOutcome,
-} from "@/lib/languages";
+import { LANGUAGES, loadDraft, saveDraft, STATUS_LABELS, type Language, type RunOutcome } from "@/lib/languages";
 
 type Result = { kind: "outcome"; outcome: RunOutcome } | { kind: "error"; message: string } | { kind: "html"; html: string };
 
@@ -38,15 +26,11 @@ function OutputBlock({ title, text, tone }: { title: string; text: string; tone?
 }
 
 export function Playground() {
-  const { languages, error, loading } = useLanguages();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const selectedId = params.get("lang") ?? "python";
-  const language = useMemo(
-    () => languages.find((l) => l.id === selectedId) ?? languages.find((l) => l.id === "python") ?? languages[0],
-    [languages, selectedId],
-  );
+  const selectedId = params.get("lang") ?? "javascript";
+  const language: Language = useMemo(() => LANGUAGES.find((l) => l.id === selectedId) ?? LANGUAGES[0], [selectedId]);
 
   const [code, setCode] = useState("");
   const [stdin, setStdin] = useState("");
@@ -55,7 +39,7 @@ export function Playground() {
   const [result, setResult] = useState<Result | null>(null);
 
   // เปลี่ยนภาษา = โหลดร่างของภาษานั้น (หรือโค้ดตั้งต้น) — ทำระหว่าง render แทน effect
-  if (language && loadedFor !== language.id) {
+  if (loadedFor !== language.id) {
     setLoadedFor(language.id);
     setCode(loadDraft(language.id) ?? language.template);
     setStdin(language.stdin);
@@ -63,39 +47,24 @@ export function Playground() {
   }
 
   useEffect(() => {
-    if (!language || loadedFor !== language.id) return;
+    if (loadedFor !== language.id) return;
     const timer = setTimeout(() => saveDraft(language.id, code, language.template), 400);
     return () => clearTimeout(timer);
   }, [code, language, loadedFor]);
 
   const run = useCallback(async () => {
-    if (!language || running) return;
+    if (running) return;
     setRunning(true);
     setResult(null);
     try {
       if (language.id === "html") setResult({ kind: "html", html: code });
-      else if (language.runtime === "browser") setResult({ kind: "outcome", outcome: await runJavaScriptInBrowser(code, stdin) });
-      else setResult({ kind: "outcome", outcome: await runOnServer(language.id, code, stdin) });
+      else setResult({ kind: "outcome", outcome: await runJavaScriptInBrowser(code, stdin) });
     } catch (runError) {
-      const message =
-        runError instanceof ApiRequestError && runError.status === 503
-          ? "ตัวรันโค้ดบน server ยังไม่พร้อม — ภาษาที่รันในเบราว์เซอร์ (JavaScript, HTML) ยังใช้ได้ตามปกติ"
-          : runError instanceof Error
-            ? runError.message
-            : "รันโค้ดไม่สำเร็จ";
-      setResult({ kind: "error", message });
+      setResult({ kind: "error", message: runError instanceof Error ? runError.message : "รันโค้ดไม่สำเร็จ" });
     } finally {
       setRunning(false);
     }
   }, [code, language, running, stdin]);
-
-  if (loading) return <LoadingState label="กำลังโหลดรายชื่อภาษา..." />;
-  if (error || !language) return <ErrorState message={error ?? "ไม่พบภาษา"} onRetry={() => window.location.reload()} />;
-
-  const grouped = CATEGORY_ORDER.map((category) => ({
-    category,
-    items: languages.filter((l) => l.category === category),
-  })).filter((g) => g.items.length);
 
   const choose = (id: string) => router.replace(`${pathname}?lang=${encodeURIComponent(id)}`, { scroll: false });
 
@@ -104,9 +73,9 @@ export function Playground() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="pixel-font text-label-md text-primary-container">PLAYGROUND</p>
-          <h1 className="text-headline-lg text-on-surface">คอมไพเลอร์ออนไลน์ {languages.length} ภาษา</h1>
+          <h1 className="text-headline-lg text-on-surface">สนามเขียนโค้ด JavaScript · HTML</h1>
           <p className="text-body-md text-on-surface-variant">
-            เลือกภาษา เขียนโค้ด ใส่ข้อมูลนำเข้า แล้วกดรัน (Ctrl + Enter)
+            เขียนโค้ด ใส่ข้อมูลนำเข้า แล้วกดรัน (Ctrl + Enter) — รันในเบราว์เซอร์ของคุณ ไม่ส่งโค้ดไปที่ใด
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -118,16 +87,12 @@ export function Playground() {
               id="language"
               value={language.id}
               onChange={(event) => choose(event.target.value)}
-              className="min-h-11 min-w-64 border-2 border-brand-navy bg-surface-container-lowest px-3 text-body-md"
+              className="min-h-11 min-w-48 border-2 border-brand-navy bg-surface-container-lowest px-3 text-body-md"
             >
-              {grouped.map((group) => (
-                <optgroup key={group.category} label={CATEGORY_LABELS[group.category] ?? group.category}>
-                  {group.items.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </optgroup>
+              {LANGUAGES.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
               ))}
             </select>
           </div>
@@ -161,7 +126,7 @@ export function Playground() {
             <span className="code-area text-white/80">{language.file}</span>
             <span className="flex items-center gap-1 text-label-sm text-white/70">
               <ShieldCheck aria-hidden className="size-4" />
-              {language.runtime === "browser" ? "รันในเบราว์เซอร์ของคุณ" : language.compiled ? "คอมไพล์แล้วรันใน sandbox" : "รันใน sandbox"}
+              รันในเบราว์เซอร์ของคุณ
             </span>
           </div>
           <CodePad id="source" label={`ซอร์สโค้ดภาษา ${language.name}`} value={code} onChange={setCode} onRun={() => void run()} />

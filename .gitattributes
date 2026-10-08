@@ -1,5 +1,4 @@
 # สคริปต์และไฟล์ที่รันใน container Linux ต้องเป็น LF เสมอ (Windows checkout เป็น CRLF แล้ว sh/python พัง)
-judge/** text eol=lf
 *.sh text eol=lf
 Dockerfile text eol=lf
 subsystem.yaml text eol=lf

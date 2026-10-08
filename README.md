@@ -75,30 +75,6 @@ docker compose -f docker-compose.yml -f docker-compose.local-judge.yml up -d --b
   ระหว่างโจทย์ถูกใช้ในเกมที่ยังไม่จบ จะไม่อนุญาตให้เปลี่ยนโจทย์หรือเฉลย การปิดโจทย์เก็บประวัติเดิมไว้
 - รองรับ Python ปัจจุบันใช้ช่องเขียนโค้ดที่รองรับคีย์บอร์ดและมือถือ
 
-## คอมไพเลอร์ออนไลน์หลายภาษา (Polyglot)
-
-หน้า `/playground` และ `/languages` · API `GET /api/v1/languages` และ `POST /api/v1/code-runs`
-
-- **JavaScript และ HTML/CSS** รันในเบราว์เซอร์ของผู้ใช้ (Web Worker / iframe แบบ sandbox) ใช้ได้ทันทีไม่ต้องมี server รันโค้ด
-- **ภาษาอื่น** รันใน image `judge/polyglot` (Debian + toolchain ราว 100 ภาษา) ผ่าน Docker ตาม `DOCKER_HOST`
-  คำสั่ง compile/run ทุกภาษาอยู่ที่ `backend/src/languages/languages.ts` ไฟล์เดียว · ผู้ใช้ส่งได้แค่ซอร์สโค้ดกับ stdin
-- รันทีละงาน (`POLYGLOT_CONCURRENCY`) คิวรอไม่เกิน `POLYGLOT_QUEUE` · ผู้ใช้หนึ่งคนรันได้ครั้งละงาน · ไม่ log โค้ดหรือ input
-- ถ้า Docker หรือ image ไม่พร้อม API ตอบ 503 + `Retry-After` และหน้าเว็บบอกผู้ใช้ตรง ๆ
-
-```bash
-docker build -t coding-arena-polyglot:dev judge/polyglot      # ครั้งแรกใช้เวลานาน (image หลาย GB)
-pnpm --filter backend languages:smoke                          # รันโค้ดตัวอย่างของทุกภาษา ต้องผ่านทุกบรรทัด
-pnpm --filter backend languages:smoke python c rust            # เฉพาะบางภาษา
-```
-
-**ก่อนเปิดใช้บน server ต้องให้ PM อนุมัติ (deployment.md ข้อ 8)**
-
-1. ใช้ Docker แบบ rootless ของ user `judge` ที่ DevOps ดูแล และ DevOps ดึง image polyglot ไว้ล่วงหน้า อ้างด้วย digest ใน `POLYGLOT_IMAGE`
-2. container ใส่ flag ขั้นต่ำของข้อ 8.3 ครบ และ**เพิ่ม tmpfs `/box` ที่รันไฟล์ได้** (`exec,nosuid,nodev,size=256m`) เพราะภาษาคอมไพล์
-   (C, C++, Go, Rust, Fortran, Pascal, COBOL ฯลฯ) ต้องรันไฟล์ที่เพิ่งคอมไพล์ — `/tmp` ยังเป็น `noexec` ตามมาตรฐาน
-3. RAM ต่อ container: ค่าเริ่ม 256 MB · JVM/.NET/GHC ใช้ 384–768 MB (ระบุรายภาษาใน `memoryMb`)
-4. ซ้อมกับ DevOps ตามข้อ 8.4 (ออกเน็ต · เขียนไฟล์ · fork bomb · กิน RAM · วนไม่จบ) ด้วย `languages:smoke` และโค้ดทดสอบที่พยายามหลุด
-
 ## ตรวจงาน
 
 ```bash
