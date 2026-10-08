@@ -1,29 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { apiCollection, apiRequest } from "./api";
-
-/** ตรงกับ LanguageDto ของ backend (`GET /api/v1/languages`) */
+/**
+ * ภาษาในคอมไพเลอร์ออนไลน์ — รันในเบราว์เซอร์ของผู้ใช้เท่านั้น (ไม่รันโค้ดผู้ใช้บน server · ไม่ต้องขออนุมัติ sandbox)
+ * JavaScript รันใน Web Worker · HTML/CSS/JS แสดงใน iframe แบบ sandbox
+ */
 export interface Language {
-  id: string;
+  id: "javascript" | "html";
   name: string;
-  category: string;
   file: string;
-  extension: string;
-  runtime: "sandbox" | "browser";
-  compiled: boolean;
   template: string;
   stdin: string;
 }
 
 export interface RunOutcome {
-  status:
-    | "OK"
-    | "COMPILE_ERROR"
-    | "RUNTIME_ERROR"
-    | "TIME_LIMIT_EXCEEDED"
-    | "OUTPUT_LIMIT_EXCEEDED"
-    | "MEMORY_LIMIT_EXCEEDED";
+  status: "OK" | "COMPILE_ERROR" | "RUNTIME_ERROR" | "TIME_LIMIT_EXCEEDED" | "OUTPUT_LIMIT_EXCEEDED";
   exitCode: number | null;
   stdout: string;
   stderr: string;
@@ -32,68 +22,49 @@ export interface RunOutcome {
   truncated?: boolean;
 }
 
-export const CATEGORY_LABELS: Record<string, string> = {
-  popular: "ยอดนิยม",
-  web: "เว็บ (รันในเบราว์เซอร์)",
-  systems: "ภาษาระบบ / คอมไพล์",
-  jvm: "ตระกูล JVM",
-  dotnet: "ตระกูล .NET",
-  scripting: "ภาษาสคริปต์",
-  data: "ข้อมูลและคณิตศาสตร์",
-  shell: "Shell และเครื่องมือข้อความ",
-  functional: "Functional",
-  lisp: "Lisp / Scheme",
-  logic: "ตรรกะ (Logic)",
-  classic: "ภาษายุคบุกเบิก",
-  esoteric: "ภาษาแปลก (Esoteric)",
-};
+const lines = (...rows: string[]) => `${rows.join("\n")}\n`;
 
-export const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS);
+export const LANGUAGES: Language[] = [
+  {
+    id: "javascript",
+    name: "JavaScript",
+    file: "main.js",
+    template: lines(
+      "// input() อ่าน stdin ทีละบรรทัด · console.log() พิมพ์ผลลัพธ์",
+      "const name = input();",
+      "console.log(`Hello, ${name}!`);",
+      "",
+      "const scores = input().split(' ').map(Number);",
+      "console.log('คะแนนรวม', scores.reduce((a, b) => a + b, 0));",
+    ),
+    stdin: "CS Arena\n10 20 30",
+  },
+  {
+    id: "html",
+    name: "HTML / CSS / JS",
+    file: "index.html",
+    template: lines(
+      "<!doctype html>",
+      "<style>",
+      "  body { font-family: monospace; display: grid; place-items: center; min-height: 90vh; margin: 0; }",
+      "  .hero { padding: 24px; border: 4px solid; font-size: 24px; }",
+      "</style>",
+      '<div class="hero">Hello, CS Arena!</div>',
+      "<script>",
+      "  document.querySelector('.hero').addEventListener('click', (e) => (e.target.textContent = 'คลิกแล้ว!'));",
+      "</script>",
+    ),
+    stdin: "",
+  },
+];
 
 export const STATUS_LABELS: Record<RunOutcome["status"], string> = {
   OK: "รันสำเร็จ",
-  COMPILE_ERROR: "คอมไพล์ไม่ผ่าน",
+  COMPILE_ERROR: "โค้ดมีข้อผิดพลาด",
   RUNTIME_ERROR: "เกิดข้อผิดพลาดขณะรัน",
   TIME_LIMIT_EXCEEDED: "ใช้เวลาเกินกำหนด",
   OUTPUT_LIMIT_EXCEEDED: "ผลลัพธ์ยาวเกินกำหนด",
-  MEMORY_LIMIT_EXCEEDED: "ใช้หน่วยความจำเกินกำหนด",
 };
-
-let cache: Promise<Language[]> | null = null;
-
-/** รายชื่อภาษาจาก backend — โหลดครั้งเดียวต่อการเปิดหน้า */
-export function useLanguages() {
-  const [state, setState] = useState<{ languages: Language[]; error: string | null; loading: boolean }>({
-    languages: [],
-    error: null,
-    loading: true,
-  });
-
-  useEffect(() => {
-    let active = true;
-    cache ??= apiCollection<Language>("/api/v1/languages");
-    cache.then(
-      (languages) => active && setState({ languages, error: null, loading: false }),
-      (error: unknown) => {
-        cache = null;
-        if (active)
-          setState({ languages: [], error: error instanceof Error ? error.message : "โหลดรายชื่อภาษาไม่สำเร็จ", loading: false });
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return state;
-}
-
-export function runOnServer(language: string, code: string, stdin: string) {
-  return apiRequest<RunOutcome & { language: string }>("/api/v1/code-runs", {
-    method: "POST",
-    body: JSON.stringify({ language, code, stdin }),
-  });
-}
 
 /** ร่างโค้ดของแต่ละภาษา — จำไว้ในเบราว์เซอร์นี้เท่านั้น (ไม่ใช่ข้อมูลลับ ไม่ใช่ token) */
 export function loadDraft(languageId: string): string | null {

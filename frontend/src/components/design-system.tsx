@@ -5,7 +5,6 @@ import {
   Code2,
   Gamepad2,
   House,
-  Languages,
   LogIn,
   LogOut,
   Swords,
@@ -17,6 +16,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { apiRequest, renewSession } from "@/lib/api";
 import type { components } from "@/lib/api-schema";
+import { MATCHES_ENABLED } from "@/lib/features";
 import { canManage, canPlay, roleLabel } from "@/lib/roles";
 
 /** เว็บพอร์ทัลกลาง — ปุ่ม "ระบบอื่นใน CSMJU2030" (ui-design-system.md ข้อ 5.1) */
@@ -36,11 +36,11 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { href: "/", label: "ล็อบบี้", icon: House },
-  { href: "/student", label: "ประลอง 1 ต่อ 1", icon: Swords, allowed: canPlay },
+  // ประลอง 1 ต่อ 1 / จัดการโจทย์ ซ่อนไว้จนกว่า PM อนุมัติ sandbox (lib/features.ts)
+  { href: "/student", label: "ประลอง 1 ต่อ 1", icon: Swords, allowed: (p) => MATCHES_ENABLED && canPlay(p) },
   { href: "/games", label: "เกม CSS", icon: Trophy },
-  { href: "/playground", label: "คอมไพเลอร์ออนไลน์", icon: Code2 },
-  { href: "/languages", label: "ภาษาทั้งหมด", icon: Languages },
-  { href: "/teacher/problems", label: "จัดการโจทย์", icon: Gamepad2, allowed: canManage },
+  { href: "/playground", label: "สนามเขียนโค้ด", icon: Code2 },
+  { href: "/teacher/problems", label: "จัดการโจทย์", icon: Gamepad2, allowed: (p) => MATCHES_ENABLED && canManage(p) },
 ];
 
 function isActive(pathname: string, href: string) {
