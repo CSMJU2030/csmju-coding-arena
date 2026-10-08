@@ -158,3 +158,22 @@ model MatchRound {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 }
+
+enum CssGame {
+  FLEXBOX
+  GRID
+}
+
+/// ด่านเกม CSS ที่ผู้เล่นผ่านแล้ว (Flexbox Adventure / Grid Attack) — แถวละด่าน ใช้คิด XP
+/// การตรวจคำตอบเกิดในเบราว์เซอร์ (เทียบ layout จริง) จึงเป็นคะแนนฝึกฝน ไม่ใช่คะแนนแข่งขัน
+model LevelClear {
+  id         String   @id @default(uuid())
+  coreUserId String   @map("core_user_id") @db.VarChar(64)
+  game       CssGame
+  level      Int
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([coreUserId, game, level])
+  @@index([game, createdAt])
+  @@map("level_clears")
+}

@@ -4,9 +4,10 @@ import type { components } from "@/lib/api-schema";
 
 import { Button, Notice, ErrorState, LoadingState } from "@/components/ui";
 
-import { useState, useRef, useEffect, use } from "react";
+import { useState, useEffect, use } from "react";
 import { CodeEditor } from "@/components/code-editor";
 import { ApiRequestError, apiRequest } from "@/lib/api";
+import { runOnServer, STATUS_LABELS } from "@/lib/languages";
 
 type Problem = components["schemas"]["ProblemDto"];
 
@@ -26,6 +27,7 @@ export default function CodingArenaPage({
     "import sys\ndata = sys.stdin.read().split()\nif data:\n    # เขียนโค้ดของคุณที่นี่\n    pass",
   );
   const [output, setOutput] = useState<string>("");
+  const [practiceInput, setPracticeInput] = useState<string>("");
   const [isExecuting, setIsExecuting] = useState(false);
 
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
@@ -33,8 +35,6 @@ export default function CodingArenaPage({
   const [notice, setNotice] = useState("");
   const [submissionError, setSubmissionError] = useState("");
   const [loadStatus, setLoadStatus] = useState(0);
-
-  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     const fetchProblem = async () => {
@@ -58,53 +58,31 @@ export default function CodingArenaPage({
     };
 
     fetchProblem();
-
-    workerRef.current = new Worker("/python-worker.js");
-    return () => {
-      workerRef.current?.terminate();
-    };
   }, [problemId]);
 
-  const runCodeLocal = () => {
-    if (!workerRef.current || !problem) return;
+  // ทดลองรันในตัวรันโค้ด sandbox ของระบบ (image เดียวกับคอมไพเลอร์ออนไลน์) — ไม่โหลดอะไรจากเว็บภายนอก
+  const runCodeLocal = async () => {
+    if (!problem || isExecuting) return;
     setIsExecuting(true);
     setOutput("");
-
-    const executionId = Date.now();
-    const handleMessage = (e: MessageEvent) => {
-      const { id, type, msg, error } = e.data;
-      if (id !== executionId) return;
-
-      if (type === "stdout") {
-        setOutput((prev) => prev + msg + "\n");
-      } else if (type === "error") {
-        setOutput((prev) => prev + `[Error]: ${error}\n`);
-        cleanup();
-      } else if (type === "done") {
-        cleanup();
-      }
-    };
-
-    const cleanup = () => {
-      clearTimeout(timeoutId);
-      workerRef.current?.removeEventListener("message", handleMessage);
-      setIsExecuting(false);
-    };
-
-    workerRef.current.addEventListener("message", handleMessage);
-
-    const timeoutId = setTimeout(() => {
-      workerRef.current?.terminate();
-      workerRef.current = new Worker("/python-worker.js");
+    try {
+      const result = await runOnServer("python", code, practiceInput);
+      const parts = [
+        `[${STATUS_LABELS[result.status] ?? result.status} · ${result.timeMs} ms]`,
+        result.compileOutput,
+        result.stdout,
+        result.stderr && `[stderr]\n${result.stderr}`,
+      ].filter(Boolean);
+      setOutput(parts.join("\n"));
+    } catch (runError) {
       setOutput(
-        (prev) =>
-          prev +
-          `\n[Timeout]: ใช้เวลาเกินกำหนด (${problem.timeLimitMs} มิลลิวินาที)\n`,
+        runError instanceof ApiRequestError && runError.status === 503
+          ? "[ตัวรันโค้ดยังไม่พร้อม] ลองใหม่อีกครั้งภายหลัง"
+          : `[Error]: ${runError instanceof Error ? runError.message : "ทดลองรันไม่สำเร็จ"}`,
       );
+    } finally {
       setIsExecuting(false);
-    }, problem.timeLimitMs);
-
-    workerRef.current.postMessage({ id: executionId, code, input: "5 5" });
+    }
   };
 
   const submitCode = async () => {
@@ -180,12 +158,26 @@ export default function CodingArenaPage({
           <CodeEditor value={code} onChange={setCode} />
         </div>
 
+        <div className="min-w-0">
+          <label htmlFor="practice-input" className="mb-1 block text-label-md text-on-surface">
+            ข้อมูลนำเข้าสำหรับทดลองรัน (stdin)
+          </label>
+          <textarea
+            id="practice-input"
+            rows={2}
+            spellCheck={false}
+            value={practiceInput}
+            onChange={(event) => setPracticeInput(event.target.value)}
+            className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest p-3 font-mono text-body-md"
+          />
+        </div>
+
         {notice && <Notice tone="success">{notice}</Notice>}
         {submissionError && <Notice>{submissionError}</Notice>}
         <div className="flex flex-col justify-end gap-3 sm:flex-row">
           <Button
             variant="secondary"
-            onClick={runCodeLocal}
+            onClick={() => void runCodeLocal()}
             busy={isExecuting}
             disabled={isExecuting}
           >

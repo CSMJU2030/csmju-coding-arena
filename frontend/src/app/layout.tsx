@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Thai, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { CsmjuAppShell } from "@/components/design-system";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
+// ฟอนต์อยู่ใน repo (app/fonts · สัญญาอนุญาต OFL แนบข้างไฟล์) — next/font/google ดาวน์โหลดตอน build
+// ทำให้ build บน CI ที่ไม่มีเน็ตล้ม (บทเรียนจาก csmju-nexus) · ชุดเดียวกับ Core Hub / nexus / canvas / toolboxes
+const jakarta = localFont({
+  src: "./fonts/PlusJakartaSans-Variable.ttf",
   variable: "--font-jakarta",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  weight: "200 800",
 });
 
-const notoSansThai = Noto_Sans_Thai({
+const notoSansThai = localFont({
+  src: "./fonts/NotoSansThai-Variable.ttf",
   variable: "--font-noto-thai",
-  subsets: ["latin", "thai"],
-  weight: ["400", "500", "600", "700"],
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {

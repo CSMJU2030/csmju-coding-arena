@@ -30,12 +30,12 @@ original `users`, `problems`, `test_cases`, and `submissions` tables. The
 migrations preserve those records, map existing users to legacy identities, and
 rename their display-name column.
 
-The frontend runs at `http://localhost:3202` and the API at
-`http://localhost:4202`. The frontend proxies `/api/*` and `/auth/*` to the API
+The frontend runs at `http://localhost:3209` and the API at
+`http://localhost:4209`. The frontend proxies `/api/*` and `/auth/*` to the API
 so the subsystem's HttpOnly SSO cookie remains available to browser requests.
 
 The deployment containers use the internal service ports web `3000` and API `4000`;
-only the web service is exposed on `127.0.0.1:3202`. Configure `DATABASE_POOL_MAX`
+only the web service is exposed on `127.0.0.1:3209`. Configure `DATABASE_POOL_MAX`
 to cap Prisma's PostgreSQL pool (default `5`).
 
 Students enter a FIFO matchmaking queue. Each match gets three distinct random

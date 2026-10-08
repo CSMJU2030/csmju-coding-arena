@@ -94,7 +94,7 @@ services:
       SUBSYSTEM_ID: ${SUBSYSTEM_ID:-csmju-coding-arena}
       TZ: Asia/Bangkok
     ports:
-      - '127.0.0.1:3202:3000'
+      - '127.0.0.1:3209:3000'
     mem_limit: 384m
 
 volumes:

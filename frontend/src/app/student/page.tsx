@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest } from "@/lib/api";
+import { canManage, canPlay } from "@/lib/roles";
 
 type QueueState = components["schemas"]["QueueStateDto"];
 
@@ -49,9 +50,8 @@ export default function StudentDashboard() {
     async function loadDashboard() {
       try {
         const profile = await apiRequest<Profile>("/api/v1/me");
-        if (profile.coreRole !== "student") {
-          if (profile.coreRole === "lecturer")
-            router.replace("/teacher/problems");
+        if (!canPlay(profile)) {
+          if (canManage(profile)) router.replace("/teacher/problems");
           else {
             setLoadStatus(403);
             setError(
