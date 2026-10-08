@@ -340,6 +340,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/level-clears": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["LevelClearsController_list"];
+        put?: never;
+        post: operations["LevelClearsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -508,6 +524,19 @@ export interface components {
             language: string;
             code: string;
             stdin?: string;
+        };
+        LevelClearDto: {
+            id: string;
+            /** @enum {string} */
+            game: "FLEXBOX" | "GRID";
+            level: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateLevelClearDto: {
+            /** @enum {string} */
+            game: "FLEXBOX" | "GRID";
+            level: number;
         };
     };
     responses: never;
@@ -1198,6 +1227,64 @@ export interface operations {
                         /** @enum {boolean} */
                         success: true;
                         data: components["schemas"]["CodeRunDto"];
+                    };
+                };
+            };
+        };
+    };
+    LevelClearsController_list: {
+        parameters: {
+            query?: {
+                game?: "FLEXBOX" | "GRID";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["LevelClearDto"][];
+                        meta: {
+                            total: number;
+                            page: number;
+                            limit: number;
+                            totalPages: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    LevelClearsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLevelClearDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["LevelClearDto"];
                     };
                 };
             };

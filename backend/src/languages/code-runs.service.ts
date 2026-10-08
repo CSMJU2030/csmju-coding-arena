@@ -50,7 +50,12 @@ export class CodeRunsService {
     };
   }
 
-  async create(userId: string, languageId: string, code: string, stdin = '') {
+  async create(
+    coreUserId: string,
+    languageId: string,
+    code: string,
+    stdin = '',
+  ) {
     const language = findLanguage(languageId);
 
     if (!language) throw AppException.badRequest(`ไม่รู้จักภาษา ${languageId}`);
@@ -58,7 +63,7 @@ export class CodeRunsService {
       throw AppException.badRequest(
         'ภาษานี้รันในเบราว์เซอร์ ไม่ต้องส่งมาที่ server',
       );
-    if (this.busyUsers.has(userId)) {
+    if (this.busyUsers.has(coreUserId)) {
       throw new AppException(
         ErrorCode.TOO_MANY_REQUESTS,
         'กำลังรันโค้ดก่อนหน้าอยู่ รอผลก่อน',
@@ -68,7 +73,7 @@ export class CodeRunsService {
       );
     }
 
-    this.busyUsers.add(userId);
+    this.busyUsers.add(coreUserId);
     try {
       const release = await this.slot();
       try {
@@ -107,7 +112,7 @@ export class CodeRunsService {
       }
       throw error;
     } finally {
-      this.busyUsers.delete(userId);
+      this.busyUsers.delete(coreUserId);
     }
   }
 }

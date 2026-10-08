@@ -1,6 +1,6 @@
 "use client";
 
-import { Code2, Gamepad2, Languages, Swords, type LucideIcon } from "lucide-react";
+import { Code2, Gamepad2, Languages, Swords, Trophy, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PixelScene } from "@/components/pixel-scene";
@@ -58,6 +58,13 @@ export default function Lobby() {
       icon: Swords,
       tone: "bg-primary-container text-on-primary",
       allowed: canPlay,
+    },
+    {
+      href: "/games",
+      title: "เกม CSS: Flexbox & Grid",
+      detail: "Flexbox Adventure 24 ด่าน และ Grid Attack 20 ด่าน — พิมพ์ CSS จริงบังคับฮีโร่พิกเซล เก็บ XP",
+      icon: Trophy,
+      tone: "bg-success text-white",
     },
     {
       href: "/playground",

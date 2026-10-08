@@ -18,6 +18,7 @@ import { TestCasesModule } from './test-cases/test-cases.module';
 import { EvaluationModule } from './evaluation/evaluation.module';
 import { MatchesModule } from './matches/matches.module';
 import { LanguagesModule } from './languages/languages.module';
+import { LevelClearsModule } from './level-clears/level-clears.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -37,6 +38,7 @@ import { HealthController } from './health.controller';
     EvaluationModule,
     MatchesModule,
     LanguagesModule,
+    LevelClearsModule,
   ],
   controllers: [HealthController],
   providers: [
