@@ -261,7 +261,38 @@
       },
       "get": {
         "operationId": "ProblemsController_getProblems",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BASICS",
+                "CONDITIONS",
+                "LOOPS",
+                "STRINGS",
+                "LISTS",
+                "MATH",
+                "ALGORITHMS"
+              ]
+            }
+          },
+          {
+            "name": "difficulty",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EASY",
+                "MEDIUM",
+                "HARD"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1641,18 +1672,44 @@
           "title": {
             "type": "string"
           },
-          "description": {
-            "type": "string"
-          },
           "timeLimitMs": {
             "type": "number"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "BASICS",
+              "CONDITIONS",
+              "LOOPS",
+              "STRINGS",
+              "LISTS",
+              "MATH",
+              "ALGORITHMS"
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "isBuiltIn": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
           }
         },
         "required": [
           "id",
           "title",
-          "description",
-          "timeLimitMs"
+          "timeLimitMs",
+          "category",
+          "difficulty",
+          "isBuiltIn",
+          "description"
         ]
       },
       "CreateProblemDto": {
@@ -1669,6 +1726,26 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "BASICS",
+              "CONDITIONS",
+              "LOOPS",
+              "STRINGS",
+              "LISTS",
+              "MATH",
+              "ALGORITHMS"
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
           }
         },
         "required": [
@@ -1698,11 +1775,34 @@
           "title": {
             "type": "string"
           },
-          "description": {
-            "type": "string"
-          },
           "timeLimitMs": {
             "type": "number"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "BASICS",
+              "CONDITIONS",
+              "LOOPS",
+              "STRINGS",
+              "LISTS",
+              "MATH",
+              "ALGORITHMS"
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "isBuiltIn": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
           },
           "isActive": {
             "type": "boolean"
@@ -1714,8 +1814,11 @@
         "required": [
           "id",
           "title",
-          "description",
           "timeLimitMs",
+          "category",
+          "difficulty",
+          "isBuiltIn",
+          "description",
           "isActive",
           "_count"
         ]
@@ -1734,6 +1837,26 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "BASICS",
+              "CONDITIONS",
+              "LOOPS",
+              "STRINGS",
+              "LISTS",
+              "MATH",
+              "ALGORITHMS"
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
           }
         }
       },
@@ -1766,12 +1889,38 @@
           },
           "timeLimitMs": {
             "type": "number"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "BASICS",
+              "CONDITIONS",
+              "LOOPS",
+              "STRINGS",
+              "LISTS",
+              "MATH",
+              "ALGORITHMS"
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "isBuiltIn": {
+            "type": "boolean"
           }
         },
         "required": [
           "id",
           "title",
-          "timeLimitMs"
+          "timeLimitMs",
+          "category",
+          "difficulty",
+          "isBuiltIn"
         ]
       },
       "TestInputsDto": {
@@ -1856,6 +2005,7 @@
           "language": {
             "type": "string",
             "enum": [
+              "PYTHON",
               "JAVASCRIPT",
               "TYPESCRIPT"
             ]
@@ -2199,6 +2349,18 @@
             "items": {
               "type": "string"
             }
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "BASICS",
+              "CONDITIONS",
+              "LOOPS",
+              "STRINGS",
+              "LISTS",
+              "MATH",
+              "ALGORITHMS"
+            ]
           }
         }
       },

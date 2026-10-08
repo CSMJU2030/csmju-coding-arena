@@ -60,15 +60,36 @@ model PlayerRating {
   updatedAt DateTime @updatedAt @map("updated_at")
 }
 
+/// หมวดของโจทย์ — ใช้สุ่มโจทย์ตามหมวดและกรองในคลังโจทย์
+enum ProblemCategory {
+  BASICS
+  CONDITIONS
+  LOOPS
+  STRINGS
+  LISTS
+  MATH
+  ALGORITHMS
+}
+
+enum ProblemDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
 model Problem {
   id          String  @id @default(uuid())
-  authorId    String  @map("author_id")
+  /// null = โจทย์ในคลังที่มากับระบบ (backend/src/problem-bank)
+  authorId    String? @map("author_id")
+  category    ProblemCategory   @default(BASICS)
+  difficulty  ProblemDifficulty @default(EASY)
+  isBuiltIn   Boolean @default(false) @map("is_built_in")
   title       String
   description String  @db.Text
   timeLimitMs Int     @map("time_limit_ms")
   isActive    Boolean @default(true) @map("is_active")
 
-  author      PlayerRating         @relation(fields: [authorId], references: [id])
+  author      PlayerRating?        @relation(fields: [authorId], references: [id], onDelete: Restrict)
   testCases   TestCase[]
   submissions Submission[]
   matchRounds MatchRound[]
@@ -139,7 +160,7 @@ model Match {
   completedAt DateTime?   @map("completed_at")
 
   playerOne PlayerRating         @relation("MatchPlayerOne", fields: [playerOneId], references: [id])
-  playerTwo PlayerRating?        @relation("MatchPlayerTwo", fields: [playerTwoId], references: [id])
+  playerTwo PlayerRating?        @relation("MatchPlayerTwo", fields: [playerTwoId], references: [id], onDelete: Restrict)
   winner    PlayerRating?        @relation("MatchWinner", fields: [winnerId], references: [id])
   rounds    MatchRound[]
 

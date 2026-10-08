@@ -9,6 +9,8 @@ import {
   MatchRoundStatus,
   MatchStatus,
   Prisma,
+  ProblemCategory,
+  ProblemDifficulty,
   SubmissionStatus,
 } from '../../generated/prisma/client';
 import { randomInt } from 'node:crypto';
@@ -94,12 +96,13 @@ export class MatchesService {
     coreUserId: string,
     title: string | undefined,
     problemIds: string[] | undefined,
+    category?: ProblemCategory,
   ) {
     const user = await this.usersService.ensureUser(coreUserId);
     const room = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(${MATCH_QUEUE_LOCK_ID})::text`;
       await this.assertFree(tx, user.id);
-      const selected = await this.pickProblems(tx, problemIds);
+      const selected = await this.pickProblems(tx, problemIds, category);
       await tx.matchQueue.deleteMany({ where: { playerId: user.id } });
       return tx.match.create({
         data: {
@@ -399,6 +402,9 @@ export class MatchesService {
                 title: true,
                 description: true,
                 timeLimitMs: true,
+                category: true,
+                difficulty: true,
+                isBuiltIn: true,
               },
             },
           },
@@ -698,18 +704,23 @@ export class MatchesService {
     }
   }
 
-  /** โจทย์ 3 ข้อของการแข่ง: ที่ผู้สร้างห้องเลือก (ต้องเปิดอยู่และมีชุดทดสอบ) หรือสุ่ม */
+  /**
+   * โจทย์ 3 ข้อของการแข่ง: ที่ผู้สร้างห้องเลือก (ต้องเปิดอยู่และมีชุดทดสอบ)
+   * หรือสุ่มคละระดับ ง่าย → กลาง → ยาก (ระดับไหนไม่มีก็ใช้ข้ออื่นแทน) จะจำกัดหมวดก็ได้
+   */
   private async pickProblems(
     tx: Prisma.TransactionClient,
     chosen?: string[],
+    category?: ProblemCategory,
   ): Promise<{ id: string }[]> {
     const problems = await tx.problem.findMany({
       where: {
         isActive: true,
         testCases: { some: {} },
         ...(chosen?.length ? { id: { in: chosen } } : {}),
+        ...(category && !chosen?.length ? { category } : {}),
       },
-      select: { id: true },
+      select: { id: true, difficulty: true },
     });
     if (chosen?.length) {
       if (
@@ -724,10 +735,31 @@ export class MatchesService {
     }
     if (problems.length < ROUNDS_PER_MATCH) {
       throw new BadRequestException(
-        'At least three active problems with test cases are required to start a match',
+        category
+          ? 'หมวดนี้มีโจทย์ไม่ถึง 3 ข้อ เลือกหมวดอื่นหรือสุ่มทุกหมวด'
+          : 'At least three active problems with test cases are required to start a match',
       );
     }
-    return this.randomSample(problems, ROUNDS_PER_MATCH);
+    const levels = [
+      ProblemDifficulty.EASY,
+      ProblemDifficulty.MEDIUM,
+      ProblemDifficulty.HARD,
+    ];
+    const picked: { id: string; difficulty: ProblemDifficulty }[] = [];
+    for (const level of levels) {
+      const pool = problems.filter(
+        (p) => p.difficulty === level && !picked.some((x) => x.id === p.id),
+      );
+      if (pool.length) picked.push(...this.randomSample(pool, 1));
+    }
+    const rest = problems.filter((p) => !picked.some((x) => x.id === p.id));
+    picked.push(...this.randomSample(rest, ROUNDS_PER_MATCH - picked.length));
+    // ข้อแรกง่ายสุดเสมอ แม้หมวดนั้นไม่มีครบทุกระดับ
+    return picked
+      .sort(
+        (a, b) => levels.indexOf(a.difficulty) - levels.indexOf(b.difficulty),
+      )
+      .map(({ id }) => ({ id }));
   }
 
   private roundsFor(problems: { id: string }[]) {

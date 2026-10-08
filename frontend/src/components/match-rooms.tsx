@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Button, EmptyState, Notice, inputClass, primaryButtonClass } from "@/components/ui";
 import { apiCollection, apiRequest } from "@/lib/api";
+import { CATEGORIES, CATEGORY_LABELS, DIFFICULTY_LABELS } from "@/lib/problem-labels";
 
 type Room = components["schemas"]["MatchRoomDto"];
 type Match = components["schemas"]["MatchDto"];
@@ -32,7 +33,8 @@ export function MatchRooms({ hostingId, disabled }: { hostingId: string | null; 
   const [actionError, setActionError] = useState("");
 
   const [title, setTitle] = useState("");
-  const [pickMode, setPickMode] = useState<"random" | "choose">("random");
+  const [pickMode, setPickMode] = useState<"random" | "category" | "choose">("random");
+  const [category, setCategory] = useState(CATEGORIES[0]);
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [picked, setPicked] = useState<string[]>(["", "", ""]);
   const [creating, setCreating] = useState(false);
@@ -79,6 +81,7 @@ export function MatchRooms({ hostingId, disabled }: { hostingId: string | null; 
         body: JSON.stringify({
           ...(title.trim() ? { title: title.trim() } : {}),
           ...(pickMode === "choose" ? { problemIds: picked } : {}),
+          ...(pickMode === "category" ? { category } : {}),
         }),
       });
       router.push(`/matches/${room.id}`);
@@ -138,13 +141,36 @@ export function MatchRooms({ hostingId, disabled }: { hostingId: string | null; 
               <legend className="mb-1 text-label-md text-on-surface">โจทย์ 3 ข้อ</legend>
               <label className="flex min-h-11 items-center gap-2 text-body-md">
                 <input type="radio" name="pick" checked={pickMode === "random"} onChange={() => setPickMode("random")} />
-                ให้ระบบสุ่มจากโจทย์ที่อาจารย์เปิดไว้
+                สุ่มคละระดับ ง่าย → ปานกลาง → ยาก (ทุกหมวด)
+              </label>
+              <label className="flex min-h-11 items-center gap-2 text-body-md">
+                <input type="radio" name="pick" checked={pickMode === "category"} onChange={() => setPickMode("category")} />
+                สุ่มเฉพาะหมวด
               </label>
               <label className="flex min-h-11 items-center gap-2 text-body-md">
                 <input type="radio" name="pick" checked={pickMode === "choose"} onChange={() => setPickMode("choose")} />
                 เลือกโจทย์เอง
               </label>
             </fieldset>
+            {pickMode === "category" && (
+              <div>
+                <label htmlFor="room-category" className="mb-1 block text-label-md text-on-surface">
+                  หมวดโจทย์
+                </label>
+                <select
+                  id="room-category"
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  className={inputClass}
+                >
+                  {CATEGORIES.map((value) => (
+                    <option key={value} value={value}>
+                      {CATEGORY_LABELS[value]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {pickMode === "choose" && (
               <div className="space-y-3">
                 {problems === null ? (
@@ -152,7 +178,7 @@ export function MatchRooms({ hostingId, disabled }: { hostingId: string | null; 
                     กำลังโหลดรายการโจทย์…
                   </p>
                 ) : problems.length < 3 ? (
-                  <p className="text-label-md text-on-surface-variant">ยังมีโจทย์ไม่ถึง 3 ข้อ — ให้อาจารย์เพิ่มโจทย์ก่อน</p>
+                  <p className="text-label-md text-on-surface-variant">ยังมีโจทย์ที่เล่นได้ไม่ถึง 3 ข้อ</p>
                 ) : (
                   [0, 1, 2].map((slot) => (
                     <div key={slot}>
@@ -170,7 +196,7 @@ export function MatchRooms({ hostingId, disabled }: { hostingId: string | null; 
                         <option value="">— เลือกโจทย์ —</option>
                         {problems.map((problem) => (
                           <option key={problem.id} value={problem.id}>
-                            {problem.title}
+                            [{CATEGORY_LABELS[problem.category] ?? problem.category} · {DIFFICULTY_LABELS[problem.difficulty] ?? problem.difficulty}] {problem.title}
                           </option>
                         ))}
                       </select>

@@ -2,10 +2,10 @@
 
 /**
  * ภาษาในคอมไพเลอร์ออนไลน์ — รันในเบราว์เซอร์ของผู้ใช้เท่านั้น (ไม่รันโค้ดผู้ใช้บน server · ไม่ต้องขออนุมัติ sandbox)
- * JavaScript รันใน Web Worker · HTML/CSS/JS แสดงใน iframe แบบ sandbox
+ * Python รันด้วย Pyodide ที่ host เอง (python-run.ts) · JavaScript รันใน Web Worker · HTML/CSS/JS แสดงใน iframe แบบ sandbox
  */
 export interface Language {
-  id: "javascript" | "html";
+  id: "python" | "javascript" | "html";
   name: string;
   file: string;
   template: string;
@@ -25,6 +25,20 @@ export interface RunOutcome {
 const lines = (...rows: string[]) => `${rows.join("\n")}\n`;
 
 export const LANGUAGES: Language[] = [
+  {
+    id: "python",
+    name: "Python 3",
+    file: "main.py",
+    template: lines(
+      "# input() อ่าน stdin ทีละบรรทัด · print() พิมพ์ผลลัพธ์",
+      "name = input()",
+      'print(f"Hello, {name}!")',
+      "",
+      "scores = list(map(int, input().split()))",
+      'print("คะแนนรวม", sum(scores))',
+    ),
+    stdin: "CS Arena\n10 20 30",
+  },
   {
     id: "javascript",
     name: "JavaScript",

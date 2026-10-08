@@ -15,6 +15,7 @@ import {
 } from '../common/dto/pagination.dto';
 import { CollectionResult } from '../common/api-response';
 import { MAX_TEST_CASES } from '../matches/browser-judge';
+import { ProblemListQueryDto } from './dto/create-problem.dto';
 
 @Injectable()
 export class ProblemsService {
@@ -37,16 +38,35 @@ export class ProblemsService {
     });
   }
 
-  async findAllActive(query = new PaginationQueryDto()) {
+  /** โจทย์ที่เปิดอยู่และมีชุดทดสอบ (เล่นได้จริง) กรองตามหมวด/ระดับได้ */
+  async findAllActive(query: ProblemListQueryDto = new ProblemListQueryDto()) {
+    const where = {
+      isActive: true,
+      testCases: { some: {} },
+      ...(query.category ? { category: query.category } : {}),
+      ...(query.difficulty ? { difficulty: query.difficulty } : {}),
+    };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.problem.findMany({
-        where: { isActive: true },
-        select: { id: true, title: true, timeLimitMs: true },
-        orderBy: [{ title: 'asc' }, { id: 'asc' }],
+        where,
+        select: {
+          id: true,
+          title: true,
+          timeLimitMs: true,
+          category: true,
+          difficulty: true,
+          isBuiltIn: true,
+        },
+        orderBy: [
+          { category: 'asc' },
+          { difficulty: 'asc' },
+          { title: 'asc' },
+          { id: 'asc' },
+        ],
         skip: query.skip,
         take: query.take,
       }),
-      this.prisma.problem.count({ where: { isActive: true } }),
+      this.prisma.problem.count({ where }),
     ]);
     return new CollectionResult(
       data,
@@ -122,7 +142,15 @@ export class ProblemsService {
   async findOne(id: string) {
     const problem = await this.prisma.problem.findUnique({
       where: { id, isActive: true },
-      select: { id: true, title: true, description: true, timeLimitMs: true },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        timeLimitMs: true,
+        category: true,
+        difficulty: true,
+        isBuiltIn: true,
+      },
     });
 
     if (!problem) {

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Pyodide ที่ host เอง — ไฟล์ของผู้พัฒนาต้นทาง ไม่แก้และไม่ lint
+    "public/pyodide/**",
   ]),
 ]);
 

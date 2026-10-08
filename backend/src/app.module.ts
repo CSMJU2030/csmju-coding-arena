@@ -17,6 +17,7 @@ import { SubmissionsModule } from './submissions/submissions.module';
 import { TestCasesModule } from './test-cases/test-cases.module';
 import { MatchesModule } from './matches/matches.module';
 import { LevelClearsModule } from './level-clears/level-clears.module';
+import { ProblemBankModule } from './problem-bank/problem-bank.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -35,6 +36,7 @@ import { HealthController } from './health.controller';
     TestCasesModule,
     MatchesModule,
     LevelClearsModule,
+    ProblemBankModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -7,6 +7,7 @@ import { Button, Notice, ErrorState, LoadingState } from "@/components/ui";
 import { useState, useEffect, use } from "react";
 import { CodeEditor } from "@/components/code-editor";
 import { ApiRequestError, apiRequest } from "@/lib/api";
+import { ProblemTags } from "@/lib/problem-labels";
 import {
   judgeAndSubmit,
   JUDGE_LANGUAGES,
@@ -28,7 +29,7 @@ export default function CodingArenaPage({
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [language, setLanguage] = useState<JudgeLanguage>("JAVASCRIPT");
+  const [language, setLanguage] = useState<JudgeLanguage>("PYTHON");
   const [code, setCode] = useState<string>(JUDGE_LANGUAGES[0].starter);
   const [progress, setProgress] = useState("");
 
@@ -84,7 +85,9 @@ export default function CodingArenaPage({
         code,
         onProgress: (done, total) =>
           setProgress(
-            done < total
+            done < 0
+              ? "กำลังโหลด Python ในเบราว์เซอร์ (ครั้งแรกอาจใช้เวลาหลายวินาที)…"
+              : done < total
               ? `กำลังรันชุดทดสอบ ${done + 1}/${total} ในเบราว์เซอร์ของคุณ…`
               : "กำลังส่งผลให้ server ตัดสิน…",
           ),
@@ -136,6 +139,9 @@ export default function CodingArenaPage({
         <h1 className="mb-3 font-display text-headline-md text-on-surface">
           {problem?.title}
         </h1>
+        <div className="mb-3">
+          <ProblemTags category={problem?.category} difficulty={problem?.difficulty} />
+        </div>
         <div className="mb-6 inline-flex rounded-full bg-primary-container/10 px-3 py-1 text-label-md text-primary-container">
           เวลาสูงสุด:{" "}
           <span className="ml-1 tabular-nums">{problem?.timeLimitMs}</span>{" "}

@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useFormDraft } from "@/lib/use-form-draft";
 import { useCallback, useEffect, useState } from "react";
+import { CATEGORIES, CATEGORY_LABELS, DIFFICULTIES, DIFFICULTY_LABELS } from "@/lib/problem-labels";
 import { useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest, apiCollection } from "@/lib/api";
 import { canManage, homeFor } from "@/lib/roles";
@@ -30,6 +31,8 @@ interface ProblemForm {
   description: string;
   timeLimitMs: number;
   isActive: boolean;
+  category?: string;
+  difficulty?: string;
 }
 
 const emptyForm: ProblemForm = {
@@ -37,6 +40,8 @@ const emptyForm: ProblemForm = {
   description: "",
   timeLimitMs: 1000,
   isActive: true,
+  category: "BASICS",
+  difficulty: "EASY",
 };
 
 type Profile = components["schemas"]["MeDto"];
@@ -311,6 +316,38 @@ export default function TeacherProblemsPage() {
             errors={validation.errors}
           />
         </label>
+        <div className="flex flex-wrap gap-4">
+          <label className="block text-label-md text-on-surface" htmlFor="problem-category">
+            หมวด
+            <select
+              id="problem-category"
+              className={`${inputClass} mt-2`}
+              value={formData.category}
+              onChange={(event) => setFormData({ ...formData, category: event.target.value })}
+            >
+              {CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {CATEGORY_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-label-md text-on-surface" htmlFor="problem-difficulty">
+            ระดับ (ใช้เรียงข้อในการสุ่ม ง่าย → ยาก)
+            <select
+              id="problem-difficulty"
+              className={`${inputClass} mt-2`}
+              value={formData.difficulty}
+              onChange={(event) => setFormData({ ...formData, difficulty: event.target.value })}
+            >
+              {DIFFICULTIES.map((value) => (
+                <option key={value} value={value}>
+                  {DIFFICULTY_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <label className="flex min-h-11 items-center gap-3 text-body-md text-on-surface">
           <input
             checked={formData.isActive}

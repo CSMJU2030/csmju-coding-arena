@@ -174,7 +174,7 @@ export default function StudentDashboard() {
       <PageHeader
         eyebrow="พื้นที่นักศึกษา"
         title="สนามประลองอัลกอริทึม"
-        description="สร้างห้องหรือเลือกห้องที่เพื่อนเปิดไว้ แข่งแก้โจทย์ร่วมกัน 3 ข้อด้วย JavaScript หรือ TypeScript ใครชนะครบ 2 ข้อก่อนเป็นผู้ชนะ"
+        description="สร้างห้องหรือเลือกห้องที่เพื่อนเปิดไว้ แข่งแก้โจทย์ร่วมกัน 3 ข้อ (สุ่มจากคลัง 40 ข้อ ง่าย → ยาก) ด้วย Python, JavaScript หรือ TypeScript ใครชนะครบ 2 ข้อก่อนเป็นผู้ชนะ"
       />
 
       {rating && (

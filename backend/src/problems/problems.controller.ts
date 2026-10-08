@@ -24,7 +24,11 @@ import type { CoreHubIdentity } from '../auth/core-hub-identity';
 
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { Permission } from '../auth/permissions';
-import { CreateProblemDto, UpdateProblemDto } from './dto/create-problem.dto';
+import {
+  CreateProblemDto,
+  UpdateProblemDto,
+  ProblemListQueryDto,
+} from './dto/create-problem.dto';
 import { ProblemsService } from './problems.service';
 
 type AuthenticatedRequest = Request & { user: CoreHubIdentity };
@@ -73,7 +77,7 @@ export class ProblemsController {
   @Get()
   @RequirePermissions(Permission.PROBLEM_READ)
   @ApiResult(ProblemSummaryDto, true, 200)
-  async getProblems(@Query() query: PaginationQueryDto) {
+  async getProblems(@Query() query: ProblemListQueryDto) {
     return this.problemsService.findAllActive(query);
   }
 

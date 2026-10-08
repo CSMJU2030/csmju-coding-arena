@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest } from "@/lib/api";
+import { ProblemTags } from "@/lib/problem-labels";
 import {
   judgeAndSubmit,
   JUDGE_LANGUAGES,
@@ -49,10 +50,10 @@ export default function MatchPage() {
   const router = useRouter();
   const matchId = params.matchId;
   const [match, setMatch] = useState<MatchData | null>(null);
-  const [language, setLanguage] = useState<JudgeLanguage>("JAVASCRIPT");
-  const [code, setCode] = useState(starterFor("JAVASCRIPT"));
+  const [language, setLanguage] = useState<JudgeLanguage>("PYTHON");
+  const [code, setCode] = useState(starterFor("PYTHON"));
   const draftRound = useRef<string | null>(null);
-  const languageRef = useRef<JudgeLanguage>("JAVASCRIPT");
+  const languageRef = useRef<JudgeLanguage>("PYTHON");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -174,7 +175,9 @@ export default function MatchPage() {
         code,
         onProgress: (done, total) =>
           setProgress(
-            done < total
+            done < 0
+              ? "กำลังโหลด Python ในเบราว์เซอร์ (ครั้งแรกอาจใช้เวลาหลายวินาที)…"
+              : done < total
               ? `กำลังรันชุดทดสอบ ${done + 1}/${total} ในเบราว์เซอร์ของคุณ…`
               : "กำลังส่งผลให้ server ตัดสิน…",
           ),
@@ -367,6 +370,9 @@ export default function MatchPage() {
               <h2 className="mt-1 font-display text-headline-md text-on-surface">
                 {round.problem.title}
               </h2>
+              <div className="mt-2">
+                <ProblemTags category={round.problem.category} difficulty={round.problem.difficulty} />
+              </div>
             </div>
             <p
               aria-label="เวลาที่เหลือ"

@@ -2,3 +2,5 @@
 *.sh text eol=lf
 Dockerfile text eol=lf
 subsystem.yaml text eol=lf
+# ไฟล์ Pyodide ที่ host เอง — เก็บตามต้นฉบับทุกไบต์ (ห้ามแปลง CRLF)
+frontend/public/pyodide/** -text

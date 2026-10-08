@@ -421,14 +421,23 @@ export interface components {
         ProblemDto: {
             id: string;
             title: string;
-            description: string;
             timeLimitMs: number;
+            /** @enum {string} */
+            category: "BASICS" | "CONDITIONS" | "LOOPS" | "STRINGS" | "LISTS" | "MATH" | "ALGORITHMS";
+            /** @enum {string} */
+            difficulty: "EASY" | "MEDIUM" | "HARD";
+            isBuiltIn: boolean;
+            description: string;
         };
         CreateProblemDto: {
             title: string;
             description: string;
             timeLimitMs: number;
             isActive: boolean;
+            /** @enum {string} */
+            category?: "BASICS" | "CONDITIONS" | "LOOPS" | "STRINGS" | "LISTS" | "MATH" | "ALGORITHMS";
+            /** @enum {string} */
+            difficulty?: "EASY" | "MEDIUM" | "HARD";
         };
         TestCountDto: {
             testCases: number;
@@ -436,8 +445,13 @@ export interface components {
         ProblemManagementDto: {
             id: string;
             title: string;
-            description: string;
             timeLimitMs: number;
+            /** @enum {string} */
+            category: "BASICS" | "CONDITIONS" | "LOOPS" | "STRINGS" | "LISTS" | "MATH" | "ALGORITHMS";
+            /** @enum {string} */
+            difficulty: "EASY" | "MEDIUM" | "HARD";
+            isBuiltIn: boolean;
+            description: string;
             isActive: boolean;
             _count: components["schemas"]["TestCountDto"];
         };
@@ -446,6 +460,10 @@ export interface components {
             description?: string;
             timeLimitMs?: number;
             isActive?: boolean;
+            /** @enum {string} */
+            category?: "BASICS" | "CONDITIONS" | "LOOPS" | "STRINGS" | "LISTS" | "MATH" | "ALGORITHMS";
+            /** @enum {string} */
+            difficulty?: "EASY" | "MEDIUM" | "HARD";
         };
         DeletedDto: {
             id: string;
@@ -456,6 +474,11 @@ export interface components {
             id: string;
             title: string;
             timeLimitMs: number;
+            /** @enum {string} */
+            category: "BASICS" | "CONDITIONS" | "LOOPS" | "STRINGS" | "LISTS" | "MATH" | "ALGORITHMS";
+            /** @enum {string} */
+            difficulty: "EASY" | "MEDIUM" | "HARD";
+            isBuiltIn: boolean;
         };
         TestInputsDto: {
             problemId: string;
@@ -478,7 +501,7 @@ export interface components {
             problemId: string;
             sourceCode: string;
             /** @enum {string} */
-            language: "JAVASCRIPT" | "TYPESCRIPT";
+            language: "PYTHON" | "JAVASCRIPT" | "TYPESCRIPT";
             /** @enum {string} */
             outcome: "COMPLETED" | "RUNTIME_ERROR" | "TIME_LIMIT_EXCEEDED" | "COMPILATION_ERROR";
             outputs: string[];
@@ -559,6 +582,8 @@ export interface components {
         CreateMatchRoomDto: {
             title?: string;
             problemIds?: string[];
+            /** @enum {string} */
+            category?: "BASICS" | "CONDITIONS" | "LOOPS" | "STRINGS" | "LISTS" | "MATH" | "ALGORITHMS";
         };
         QueueStateDto: {
             /** @enum {string} */
@@ -739,7 +764,10 @@ export interface operations {
     };
     ProblemsController_getProblems: {
         parameters: {
-            query?: never;
+            query?: {
+                category?: "BASICS" | "CONDITIONS" | "LOOPS" | "STRINGS" | "LISTS" | "MATH" | "ALGORITHMS";
+                difficulty?: "EASY" | "MEDIUM" | "HARD";
+            };
             header?: never;
             path?: never;
             cookie?: never;

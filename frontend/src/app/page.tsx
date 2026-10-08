@@ -1,6 +1,6 @@
 "use client";
 
-import { Code2, Gamepad2, Swords, Trophy, type LucideIcon } from "lucide-react";
+import { BookOpen, Code2, Gamepad2, Swords, Trophy, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PixelScene } from "@/components/pixel-scene";
@@ -53,7 +53,7 @@ export default function Lobby() {
     {
       href: "/student",
       title: "ประลอง 1 ต่อ 1",
-      detail: "สร้างห้องหรือเลือกห้องที่เพื่อนเปิดไว้ แข่งแก้โจทย์ชุดเดียวกันด้วย JavaScript หรือ TypeScript ชนะ 2 ใน 3 ข้อ เก็บ Elo",
+      detail: "สร้างห้องหรือเลือกห้องที่เพื่อนเปิดไว้ แข่งแก้โจทย์ชุดเดียวกันด้วย Python, JavaScript หรือ TypeScript ชนะ 2 ใน 3 ข้อ เก็บ Elo",
       icon: Swords,
       tone: "bg-primary-container text-on-primary",
       allowed: canPlay,
@@ -66,9 +66,16 @@ export default function Lobby() {
       tone: "bg-success text-white",
     },
     {
+      href: "/problems",
+      title: "คลังโจทย์ 40 ข้อ",
+      detail: "โจทย์ 7 หมวด ง่ายถึงยาก ฝึกด้วย Python, JavaScript หรือ TypeScript ตรวจกับชุดทดสอบทันที",
+      icon: BookOpen,
+      tone: "bg-primary-container text-white",
+    },
+    {
       href: "/playground",
       title: "สนามเขียนโค้ด",
-      detail: "เขียนและรัน JavaScript หรือทำหน้าเว็บ HTML/CSS ดูผลทันที — รันในเบราว์เซอร์ของคุณ",
+      detail: "เขียนและรัน Python, JavaScript หรือทำหน้าเว็บ HTML/CSS ดูผลทันที — รันในเบราว์เซอร์ของคุณ",
       icon: Code2,
       tone: "bg-brand-amber text-brand-navy",
     },

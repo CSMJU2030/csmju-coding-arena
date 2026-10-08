@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CodePad } from "@/components/code-pad";
 import { runJavaScriptInBrowser } from "@/lib/browser-run";
+import { sharedPythonRunner } from "@/lib/python-run";
 import { LANGUAGES, loadDraft, saveDraft, STATUS_LABELS, type Language, type RunOutcome } from "@/lib/languages";
 
 type Result = { kind: "outcome"; outcome: RunOutcome } | { kind: "error"; message: string } | { kind: "html"; html: string };
@@ -29,7 +30,7 @@ export function Playground() {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const selectedId = params.get("lang") ?? "javascript";
+  const selectedId = params.get("lang") ?? "python";
   const language: Language = useMemo(() => LANGUAGES.find((l) => l.id === selectedId) ?? LANGUAGES[0], [selectedId]);
 
   const [code, setCode] = useState("");
@@ -58,7 +59,10 @@ export function Playground() {
     setResult(null);
     try {
       if (language.id === "html") setResult({ kind: "html", html: code });
-      else setResult({ kind: "outcome", outcome: await runJavaScriptInBrowser(code, stdin) });
+      else if (language.id === "python") {
+        const runner = await sharedPythonRunner();
+        setResult({ kind: "outcome", outcome: await runner.run(code, stdin) });
+      } else setResult({ kind: "outcome", outcome: await runJavaScriptInBrowser(code, stdin) });
     } catch (runError) {
       setResult({ kind: "error", message: runError instanceof Error ? runError.message : "รันโค้ดไม่สำเร็จ" });
     } finally {
@@ -73,7 +77,7 @@ export function Playground() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="pixel-font text-label-md text-primary-container">PLAYGROUND</p>
-          <h1 className="text-headline-lg text-on-surface">สนามเขียนโค้ด JavaScript · HTML</h1>
+          <h1 className="text-headline-lg text-on-surface">สนามเขียนโค้ด Python · JavaScript · HTML</h1>
           <p className="text-body-md text-on-surface-variant">
             เขียนโค้ด ใส่ข้อมูลนำเข้า แล้วกดรัน (Ctrl + Enter) — รันในเบราว์เซอร์ของคุณ ไม่ส่งโค้ดไปที่ใด
           </p>

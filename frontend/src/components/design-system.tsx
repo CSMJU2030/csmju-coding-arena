@@ -9,6 +9,7 @@ import {
   LogOut,
   Swords,
   Trophy,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +37,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: "/", label: "ล็อบบี้", icon: House },
   { href: "/student", label: "ประลอง 1 ต่อ 1", icon: Swords, allowed: canPlay },
+  { href: "/problems", label: "คลังโจทย์", icon: BookOpen },
   { href: "/games", label: "เกม CSS", icon: Trophy },
   { href: "/playground", label: "สนามเขียนโค้ด", icon: Code2 },
   { href: "/teacher/problems", label: "จัดการโจทย์", icon: Gamepad2, allowed: canManage },

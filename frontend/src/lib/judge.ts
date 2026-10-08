@@ -2,16 +2,28 @@
 
 import { apiRequest } from "@/lib/api";
 import { runJavaScriptInBrowser } from "@/lib/browser-run";
+import { sharedPythonRunner } from "@/lib/python-run";
 
 /**
  * ตรวจคำตอบแบบ "รันในเบราว์เซอร์ ตัดสินที่ server" (ดู backend/src/matches/browser-judge.ts)
  * server ส่งแค่ input ของชุดทดสอบมา · โค้ดรันใน Web Worker ทีละชุด · stdout ถูกส่งกลับไปให้ server เทียบ
  * → server ไม่รันโค้ดของผู้ใช้ จึงไม่ต้องมี sandbox บน server
  */
-export type JudgeLanguage = "JAVASCRIPT" | "TYPESCRIPT";
+export type JudgeLanguage = "PYTHON" | "JAVASCRIPT" | "TYPESCRIPT";
 export type RunOutcome = "COMPLETED" | "RUNTIME_ERROR" | "TIME_LIMIT_EXCEEDED" | "COMPILATION_ERROR";
 
 export const JUDGE_LANGUAGES: { id: JudgeLanguage; name: string; starter: string }[] = [
+  {
+    id: "PYTHON",
+    name: "Python 3",
+    starter: [
+      "# input() อ่านข้อมูลนำเข้าทีละบรรทัด · print() พิมพ์คำตอบ",
+      "line = input()",
+      "",
+      "print(line)",
+      "",
+    ].join("\n"),
+  },
   {
     id: "JAVASCRIPT",
     name: "JavaScript",
@@ -86,6 +98,8 @@ export async function runAgainstInputs(
   tests: TestInputs,
   onProgress?: (done: number, total: number) => void,
 ): Promise<JudgeRun> {
+  if (language === "PYTHON") onProgress?.(-1, tests.inputs.length);
+  const python = language === "PYTHON" ? await sharedPythonRunner() : null;
   let source = code;
   if (language === "TYPESCRIPT") {
     const compiled = await transpile(code);
@@ -97,7 +111,9 @@ export async function runAgainstInputs(
   const outputs: string[] = [];
   for (const [index, stdin] of tests.inputs.entries()) {
     onProgress?.(index, tests.inputs.length);
-    const result = await runJavaScriptInBrowser(source, stdin, limitMs);
+    const result = python
+      ? await python.run(source, stdin, limitMs)
+      : await runJavaScriptInBrowser(source, stdin, limitMs);
     if (result.status === "OK") {
       outputs.push(result.stdout);
       continue;

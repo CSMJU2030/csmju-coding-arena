@@ -1,16 +1,27 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TestInputsDto } from '../matches/browser-judge';
 
-export class ProblemDto {
-  @ApiProperty() id!: string;
-  @ApiProperty() title!: string;
-  @ApiProperty() description!: string;
-  @ApiProperty() timeLimitMs!: number;
-}
+export const PROBLEM_CATEGORIES = [
+  'BASICS',
+  'CONDITIONS',
+  'LOOPS',
+  'STRINGS',
+  'LISTS',
+  'MATH',
+  'ALGORITHMS',
+] as const;
+export const PROBLEM_DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'] as const;
 export class ProblemSummaryDto {
   @ApiProperty() id!: string;
   @ApiProperty() title!: string;
   @ApiProperty() timeLimitMs!: number;
+  @ApiProperty({ enum: PROBLEM_CATEGORIES }) category!: string;
+  @ApiProperty({ enum: PROBLEM_DIFFICULTIES }) difficulty!: string;
+  /** true = โจทย์ในคลังที่มากับระบบ */
+  @ApiProperty() isBuiltIn!: boolean;
+}
+export class ProblemDto extends ProblemSummaryDto {
+  @ApiProperty() description!: string;
 }
 export class TestCountDto {
   @ApiProperty() testCases!: number;

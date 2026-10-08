@@ -21,7 +21,11 @@ import { SubmissionStatus } from '../../generated/prisma/client';
  * ข้อจำกัดที่ยอมรับ: ผู้เล่นเห็น input ของชุดทดสอบ (รวมชุดที่ซ่อน) และอาจแก้ผลที่ส่งได้
  * จึงเก็บโค้ดทุกครั้งที่ส่งไว้ให้อาจารย์ตรวจย้อนหลัง
  */
-export const BROWSER_LANGUAGES = ['JAVASCRIPT', 'TYPESCRIPT'] as const;
+export const BROWSER_LANGUAGES = [
+  'PYTHON',
+  'JAVASCRIPT',
+  'TYPESCRIPT',
+] as const;
 export type BrowserLanguage = (typeof BROWSER_LANGUAGES)[number];
 
 export const RUN_OUTCOMES = [

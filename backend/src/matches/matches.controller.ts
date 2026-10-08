@@ -66,6 +66,7 @@ export class MatchesController {
       request.user.id,
       dto.title,
       dto.problemIds,
+      dto.category,
     );
   }
 

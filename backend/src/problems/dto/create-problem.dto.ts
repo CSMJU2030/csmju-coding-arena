@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -9,6 +10,14 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination.dto';
+import {
+  PROBLEM_CATEGORIES,
+  PROBLEM_DIFFICULTIES,
+} from '../../contracts/api.dto';
+
+type Category = (typeof PROBLEM_CATEGORIES)[number];
+type Difficulty = (typeof PROBLEM_DIFFICULTIES)[number];
 
 export class CreateProblemDto {
   @IsString()
@@ -32,6 +41,16 @@ export class CreateProblemDto {
   @IsBoolean()
   @ApiProperty({ type: Boolean })
   isActive!: boolean;
+
+  @IsOptional()
+  @IsIn(PROBLEM_CATEGORIES)
+  @ApiPropertyOptional({ enum: PROBLEM_CATEGORIES })
+  category?: Category;
+
+  @IsOptional()
+  @IsIn(PROBLEM_DIFFICULTIES)
+  @ApiPropertyOptional({ enum: PROBLEM_DIFFICULTIES })
+  difficulty?: Difficulty;
 }
 
 export class UpdateProblemDto {
@@ -60,4 +79,27 @@ export class UpdateProblemDto {
   @IsBoolean()
   @ApiPropertyOptional({ type: Boolean })
   isActive?: boolean;
+
+  @IsOptional()
+  @IsIn(PROBLEM_CATEGORIES)
+  @ApiPropertyOptional({ enum: PROBLEM_CATEGORIES })
+  category?: Category;
+
+  @IsOptional()
+  @IsIn(PROBLEM_DIFFICULTIES)
+  @ApiPropertyOptional({ enum: PROBLEM_DIFFICULTIES })
+  difficulty?: Difficulty;
+}
+
+/** คลังโจทย์: กรองตามหมวด/ระดับ */
+export class ProblemListQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsIn(PROBLEM_CATEGORIES)
+  @ApiPropertyOptional({ enum: PROBLEM_CATEGORIES })
+  category?: Category;
+
+  @IsOptional()
+  @IsIn(PROBLEM_DIFFICULTIES)
+  @ApiPropertyOptional({ enum: PROBLEM_DIFFICULTIES })
+  difficulty?: Difficulty;
 }
