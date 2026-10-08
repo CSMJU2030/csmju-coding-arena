@@ -114,10 +114,14 @@ exception filter และ Core Hub client/cache
 
 | Core role | Subsystem role | สิทธิ์หลัก |
 |---|---|---|
-| student | STUDENT | แข่งขัน ส่งคำตอบ ดูอันดับและโจทย์ |
-| lecturer | STAFF | เพิ่ม/แก้ไข/ปิดทุกโจทย์ และเพิ่ม/แก้ไข/ลบชุดทดสอบ |
+| student | STUDENT | แข่งขัน ส่งคำตอบ ดูอันดับและโจทย์ · คอมไพเลอร์ออนไลน์ |
+| alumni | ALUMNI | ดูโจทย์และอันดับ · คอมไพเลอร์ออนไลน์ |
+| staff | STAFF | เพิ่ม/แก้ไข/ปิดทุกโจทย์ และเพิ่ม/แก้ไข/ลบชุดทดสอบ · คอมไพเลอร์ออนไลน์ |
+| lecturer | STAFF | เหมือน staff |
+| guest | ALUMNI | เหมือน alumni |
+| admin | ADMIN | เหมือน staff |
 
-บทบาทอื่นปฏิเสธ ต้องลง mapping นี้ในทะเบียน Core Hub ให้ตรงกัน
+ครบ 6 core role (8 ต.ค. 2569 — เดิมมีแค่ student/lecturer ทำให้บัญชี staff/admin ได้ 403) · ต้องลง mapping นี้ในทะเบียน Core Hub ให้ตรงกัน
 ไม่มีบัญชีล็อกอินหรือ local identity/session table ในระบบ
 player_ratings เก็บเพียง reference ID ชื่อเล่นที่ระบบสร้าง และคะแนนการแข่งขัน
 

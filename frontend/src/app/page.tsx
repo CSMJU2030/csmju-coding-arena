@@ -6,10 +6,9 @@ import { useEffect, useState } from "react";
 import { PixelScene } from "@/components/pixel-scene";
 import { ErrorState, LoadingState } from "@/components/ui";
 import { ApiRequestError, apiCollection, apiRequest } from "@/lib/api";
+import { canManage, canPlay, type RoleProfile } from "@/lib/roles";
 
-interface Profile {
-  coreRole: string;
-}
+type Profile = RoleProfile;
 
 interface Mode {
   href: string;
@@ -17,7 +16,7 @@ interface Mode {
   detail: string;
   icon: LucideIcon;
   tone: string;
-  roles?: string[];
+  allowed?: (p: Profile) => boolean;
 }
 
 type State =
@@ -58,7 +57,7 @@ export default function Lobby() {
       detail: "จับคู่กับเพื่อน แก้โจทย์ชุดเดียวกัน ชนะ 2 ใน 3 ข้อ เก็บคะแนน Elo ไต่อันดับ",
       icon: Swords,
       tone: "bg-primary-container text-on-primary",
-      roles: ["student"],
+      allowed: canPlay,
     },
     {
       href: "/playground",
@@ -83,11 +82,11 @@ export default function Lobby() {
       detail: "เพิ่ม แก้ไข และปิดโจทย์ พร้อมชุดทดสอบสำหรับการประลอง",
       icon: Gamepad2,
       tone: "bg-primary-container text-on-primary",
-      roles: ["lecturer"],
+      allowed: canManage,
     },
   ];
   const visible =
-    state.status === "ready" ? modes.filter((m) => !m.roles || m.roles.includes(state.profile.coreRole)) : [];
+    state.status === "ready" ? modes.filter((m) => !m.allowed || m.allowed(state.profile)) : [];
 
   return (
     <div className="space-y-10">
@@ -109,7 +108,7 @@ export default function Lobby() {
           )}
           {state.status === "forbidden" && (
             <p role="alert" className="max-w-2xl bg-error-container p-4 text-on-error-container">
-              บัญชีนี้ยังไม่มีสิทธิ์ใช้งาน Coding Arena (เปิดให้นักศึกษาและอาจารย์)
+              บทบาทของบัญชีนี้ยังไม่ได้รับสิทธิ์ใน Coding Arena — แจ้งผู้ดูแลระบบให้ตรวจ role mapping
             </p>
           )}
         </div>

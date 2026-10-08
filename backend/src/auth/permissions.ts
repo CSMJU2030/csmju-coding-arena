@@ -10,7 +10,10 @@ export enum Permission {
 export const ROLE_PERMISSIONS: Readonly<Record<SubsystemRole,readonly Permission[]>> = {
   [SubsystemRole.STUDENT]: [Permission.PROBLEM_READ,Permission.MATCH_PLAY,Permission.SUBMISSION_CREATE,Permission.LEADERBOARD_READ,Permission.LANGUAGE_READ,Permission.CODE_RUN_CREATE],
   [SubsystemRole.STAFF]: [Permission.PROBLEM_READ,Permission.PROBLEM_MANAGE,Permission.PROBLEM_CREATE,Permission.PROBLEM_UPDATE,Permission.PROBLEM_DELETE,Permission.TEST_CASE_READ,Permission.TEST_CASE_CREATE,Permission.TEST_CASE_UPDATE,Permission.TEST_CASE_DELETE,Permission.LEADERBOARD_READ,Permission.LANGUAGE_READ,Permission.CODE_RUN_CREATE],
-  [SubsystemRole.ALUMNI]: [], [SubsystemRole.ADMIN]: [],
+  // ศิษย์เก่า / ผู้เยี่ยมชม: ดูโจทย์ อันดับ และใช้คอมไพเลอร์ออนไลน์ — แข่งและแก้โจทย์ไม่ได้
+  [SubsystemRole.ALUMNI]: [Permission.PROBLEM_READ,Permission.LEADERBOARD_READ,Permission.LANGUAGE_READ,Permission.CODE_RUN_CREATE],
+  // ผู้ดูแลระบบ: จัดการโจทย์และชุดทดสอบเหมือนอาจารย์
+  [SubsystemRole.ADMIN]: [Permission.PROBLEM_READ,Permission.PROBLEM_MANAGE,Permission.PROBLEM_CREATE,Permission.PROBLEM_UPDATE,Permission.PROBLEM_DELETE,Permission.TEST_CASE_READ,Permission.TEST_CASE_CREATE,Permission.TEST_CASE_UPDATE,Permission.TEST_CASE_DELETE,Permission.LEADERBOARD_READ,Permission.LANGUAGE_READ,Permission.CODE_RUN_CREATE],
 };
 export function can(role:SubsystemRole,permission:Permission):boolean { return ROLE_PERMISSIONS[role]?.includes(permission)??false; }
 export function canAny(role:SubsystemRole,permissions:readonly Permission[]):boolean {return permissions.some(p=>can(role,p));}

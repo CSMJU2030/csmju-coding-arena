@@ -21,6 +21,7 @@ import { useFormDraft } from "@/lib/use-form-draft";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest, apiCollection } from "@/lib/api";
+import { canManage, homeFor } from "@/lib/roles";
 
 type Problem = components["schemas"]["ProblemManagementDto"];
 
@@ -70,8 +71,8 @@ export default function TeacherProblemsPage() {
     async function load() {
       try {
         const profile = await apiRequest<Profile>("/api/v1/me");
-        if (profile.coreRole !== "lecturer") {
-          router.replace(profile.coreRole === "student" ? "/student" : "/");
+        if (!canManage(profile)) {
+          router.replace(homeFor(profile));
           return;
         }
         await loadProblems();

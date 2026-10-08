@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { apiRequest, renewSession } from "@/lib/api";
 import type { components } from "@/lib/api-schema";
+import { canManage, canPlay, roleLabel } from "@/lib/roles";
 
 /** เว็บพอร์ทัลกลาง — ปุ่ม "ระบบอื่นใน CSMJU2030" (ui-design-system.md ข้อ 5.1) */
 const CORE_HUB_WEB_URL = (
@@ -28,16 +29,16 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** core role ที่เห็นเมนูนี้ · ไม่ระบุ = ทุกคนที่ล็อกอินแล้ว */
-  roles?: string[];
+  /** ใครเห็นเมนูนี้ · ไม่ระบุ = ทุกคนที่ล็อกอินแล้ว */
+  allowed?: (p: ShellProfile) => boolean;
 }
 
 const NAV: NavItem[] = [
   { href: "/", label: "ล็อบบี้", icon: House },
-  { href: "/student", label: "ประลอง 1 ต่อ 1", icon: Swords, roles: ["student"] },
+  { href: "/student", label: "ประลอง 1 ต่อ 1", icon: Swords, allowed: canPlay },
   { href: "/playground", label: "คอมไพเลอร์ออนไลน์", icon: Code2 },
   { href: "/languages", label: "ภาษาทั้งหมด", icon: Languages },
-  { href: "/teacher/problems", label: "จัดการโจทย์", icon: Gamepad2, roles: ["lecturer"] },
+  { href: "/teacher/problems", label: "จัดการโจทย์", icon: Gamepad2, allowed: canManage },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -76,7 +77,7 @@ export function CsmjuAppShell({ children }: { children: ReactNode }) {
   }, [profile]);
 
   const items = profile
-    ? NAV.filter((item) => !item.roles || item.roles.includes(profile.coreRole))
+    ? NAV.filter((item) => !item.allowed || item.allowed(profile))
     : NAV.slice(0, 1);
 
   return (
@@ -180,7 +181,7 @@ function AccountButton({
     );
   }
 
-  const role = profile.coreRole === "lecturer" ? "อาจารย์" : "นักศึกษา";
+  const role = roleLabel(profile);
 
   // ไม่มีชื่อหรืออีเมลในหน้าจอ — ระบบนี้ไม่เก็บข้อมูลบุคคล แสดงแค่บทบาท
   return (

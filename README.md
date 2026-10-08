@@ -60,7 +60,7 @@ docker compose -f docker-compose.yml -f docker-compose.local-judge.yml up -d --b
 | Subsystem ID | `csmju-coding-arena` |
 | Base URL | `http://localhost:3209` |
 | Callback URL | `http://localhost:3209/auth/callback` |
-| Role mapping | `student → STUDENT`, `lecturer → STAFF` |
+| Role mapping | `student → STUDENT` · `alumni → ALUMNI` · `staff → STAFF` · `lecturer → STAFF` · `guest → ALUMNI` · `admin → ADMIN` |
 
 รูปแบบ callback ใช้พอร์ต frontend ตาม `standards/docs/connect-core-hub.md` พอร์ตของทีมนี้คือ 3209
 เมื่อขึ้น host จริง ต้องให้ผู้ดูแลเปลี่ยน Base URL และ Callback URL เป็น HTTPS และใช้ NODE_ENV=production

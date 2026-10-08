@@ -228,7 +228,17 @@ async function main() {
       role: 'admin',
       azp: 'csmju-coding-arena',
     });
-    assert.equal((await request('/api/v1/me', admin)).res.status, 403);
+    // admin ได้ role ADMIN (จัดการโจทย์ได้ แต่ไม่ได้ลงแข่ง)
+    const adminMe = await request<{ subsystemRole: string }>(
+      '/api/v1/me',
+      admin,
+    );
+    assert.equal(adminMe.res.status, 200);
+    assert.equal(adminMe.json.data.subsystemRole, 'ADMIN');
+    assert.equal(
+      (await request('/api/v1/matches/queue', admin, 'POST')).res.status,
+      403,
+    );
     const login = await fetch(base + '/auth/login?next=%2Fstudent', {
       redirect: 'manual',
     });

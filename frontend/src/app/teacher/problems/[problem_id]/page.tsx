@@ -19,6 +19,7 @@ import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest, apiCollection } from "@/lib/api";
+import { canManage, homeFor } from "@/lib/roles";
 
 type TestCase = components["schemas"]["TestCaseDto"];
 
@@ -68,8 +69,8 @@ export default function TeacherTestCasesPage({
     async function load() {
       try {
         const profile = await apiRequest<Profile>("/api/v1/me");
-        if (profile.coreRole !== "lecturer") {
-          router.replace(profile.coreRole === "student" ? "/student" : "/");
+        if (!canManage(profile)) {
+          router.replace(homeFor(profile));
           return;
         }
         await loadTestCases();
