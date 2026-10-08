@@ -538,31 +538,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
   ),
 
   // ---------- .NET ----------
-  spec(
-    'fsharp',
-    'F#',
-    'dotnet',
-    'main.fsx',
-    ['fsharpi', '--nologo', '--quiet', '--exec', 'main.fsx'],
-    lines('let name = System.Console.ReadLine()', 'printfn "Hello, %s!" name'),
-    { memoryMb: 512 },
-  ),
-  spec(
-    'vbnet',
-    'Visual Basic .NET',
-    'dotnet',
-    'main.vb',
-    ['mono', 'main.exe'],
-    lines(
-      'Module Program',
-      '    Sub Main()',
-      '        Dim name As String = Console.ReadLine()',
-      '        Console.WriteLine("Hello, " & name & "!")',
-      '    End Sub',
-      'End Module',
-    ),
-    { compile: ['vbnc', '-nologo', '-out:main.exe', 'main.vb'], memoryMb: 384 },
-  ),
 
   // ---------- สคริปต์ ----------
   spec(
@@ -631,14 +606,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
     lines('local name = io.read("*l")', 'print("Hello, " .. name .. "!")'),
   ),
   spec(
-    'fennel',
-    'Fennel',
-    'scripting',
-    'main.fnl',
-    ['fennel', 'main.fnl'],
-    lines('(print (.. "Hello, " (io.read "*l") "!"))'),
-  ),
-  spec(
     'mruby',
     'mruby',
     'scripting',
@@ -674,14 +641,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
     ),
   ),
   spec(
-    'quickjs',
-    'JavaScript (QuickJS)',
-    'scripting',
-    'main.js',
-    ['qjs', '--std', 'main.js'],
-    lines('const name = std.in.getline();', 'console.log(`Hello, ${name}!`);'),
-  ),
-  spec(
     'pike',
     'Pike',
     'scripting',
@@ -694,14 +653,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
       '    return 0;',
       '}',
     ),
-  ),
-  spec(
-    'squirrel',
-    'Squirrel',
-    'scripting',
-    'main.nut',
-    ['squirrel3', 'main.nut'],
-    lines('print("Hello, CS Arena!\\n");'),
   ),
   spec(
     'neko',
@@ -846,14 +797,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
     lines('name=`{read}', "echo 'Hello, '^$name^'!'"),
   ),
   spec(
-    'es',
-    'es (extensible shell)',
-    'shell',
-    'main.es',
-    ['es', 'main.es'],
-    lines('name = `{read}', "echo 'Hello, '^$name^'!'"),
-  ),
-  spec(
     'gawk',
     'AWK (GNU awk)',
     'shell',
@@ -946,18 +889,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
     { memoryMb: 384 },
   ),
   spec(
-    'sml-mlton',
-    'Standard ML (MLton)',
-    'functional',
-    'main.sml',
-    ['./main'],
-    lines(
-      'val name = case TextIO.inputLine TextIO.stdIn of SOME s => String.substring (s, 0, size s - 1) | NONE => "";',
-      'val () = print ("Hello, " ^ name ^ "!\\n");',
-    ),
-    { compile: ['mlton', '-output', 'main', 'main.sml'], memoryMb: 512 },
-  ),
-  spec(
     'erlang',
     'Erlang',
     'functional',
@@ -978,40 +909,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
     ['elixir', 'main.exs'],
     lines('name = IO.gets("") |> String.trim()', 'IO.puts("Hello, #{name}!")'),
     { memoryMb: 384 },
-  ),
-  spec(
-    'lfe',
-    'LFE (Lisp Flavoured Erlang)',
-    'functional',
-    'main.lfe',
-    ['lfe', 'main.lfe'],
-    lines('(io:format "Hello, ~s!~n" (list (string:trim (io:get_line ""))))'),
-    { memoryMb: 384 },
-  ),
-  spec(
-    'fsharp-compiled',
-    'F# (compiled)',
-    'dotnet',
-    'main.fs',
-    ['mono', 'main.exe'],
-    lines(
-      '[<EntryPoint>]',
-      'let main _ =',
-      '    let name = System.Console.ReadLine()',
-      '    printfn "Hello, %s!" name',
-      '    0',
-    ),
-    {
-      compile: [
-        'fsharpc',
-        '--nologo',
-        '--standalone',
-        '-o',
-        'main.exe',
-        'main.fs',
-      ],
-      memoryMb: 512,
-    },
   ),
 
   // ---------- Lisp / Scheme ----------
@@ -1042,14 +939,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
     'lisp',
     'main.scm',
     ['csi', '-s', 'main.scm'],
-    SCHEME_TEMPLATE,
-  ),
-  spec(
-    'gauche',
-    'Scheme (Gauche)',
-    'lisp',
-    'main.scm',
-    ['gosh', 'main.scm'],
     SCHEME_TEMPLATE,
   ),
   spec(
@@ -1112,14 +1001,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
     ['newlisp', 'main.lsp'],
     lines('(println "Hello, " (read-line) "!")', '(exit)'),
   ),
-  spec(
-    'hy',
-    'Hy',
-    'lisp',
-    'main.hy',
-    ['hy', 'main.hy'],
-    lines('(print (+ "Hello, " (input) "!"))'),
-  ),
 
   // ---------- logic / stack / classic ----------
   spec(
@@ -1176,14 +1057,6 @@ export const LANGUAGES: readonly LanguageSpec[] = [
     'main.fth',
     ['pforth', '-q', 'main.fth'],
     lines('." Hello, CS Arena!" cr', 'bye'),
-  ),
-  spec(
-    'smalltalk',
-    'Smalltalk (GNU)',
-    'classic',
-    'main.st',
-    ['gst', 'main.st'],
-    lines("Transcript showCr: 'Hello, CS Arena!'."),
   ),
   spec(
     'rexx',

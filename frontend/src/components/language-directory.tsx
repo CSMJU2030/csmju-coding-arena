@@ -30,7 +30,7 @@ export function LanguageDirectory() {
         <p className="pixel-font text-label-md text-primary-container">SELECT YOUR LANGUAGE</p>
         <h1 className="text-headline-lg">ภาษาทั้งหมด {languages.length} ภาษา</h1>
         <p className="text-body-md text-on-surface-variant">
-          ทุกภาษามีโค้ดตัวอย่างที่ทดสอบรันแล้ว — ภาษาเว็บรันในเบราว์เซอร์ของคุณ ภาษาอื่นรันใน sandbox ที่ตัดเน็ตและจำกัดทรัพยากร
+          ทุกภาษามีโค้ดตัวอย่างให้กดรัน — ภาษาเว็บรันในเบราว์เซอร์ของคุณ ภาษาอื่นรันใน sandbox ของคณะที่ตัดเน็ตและจำกัดทรัพยากร
         </p>
       </header>
 
