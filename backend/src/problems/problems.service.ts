@@ -1,6 +1,7 @@
 import type { Prisma } from '../../generated/prisma/client';
 import { withCompetitionLock } from '../matches/competition-lock';
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -13,6 +14,7 @@ import {
   buildPaginationMeta,
 } from '../common/dto/pagination.dto';
 import { CollectionResult } from '../common/api-response';
+import { MAX_TEST_CASES } from '../matches/browser-judge';
 
 @Injectable()
 export class ProblemsService {
@@ -94,6 +96,27 @@ export class ProblemsService {
       }
       return { id, deleted: true };
     });
+  }
+
+  async testInputs(id: string) {
+    const problem = await this.prisma.problem.findFirst({
+      where: { id, isActive: true },
+      select: {
+        id: true,
+        timeLimitMs: true,
+        testCases: { orderBy: { id: 'asc' }, select: { inputData: true } },
+      },
+    });
+    if (!problem) throw new NotFoundException('Problem not found');
+    if (!problem.testCases.length)
+      throw new BadRequestException('Problem has no test cases');
+    return {
+      problemId: problem.id,
+      timeLimitMs: problem.timeLimitMs,
+      inputs: problem.testCases
+        .slice(0, MAX_TEST_CASES)
+        .map((testCase) => testCase.inputData),
+    };
   }
 
   async findOne(id: string) {

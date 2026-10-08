@@ -15,10 +15,25 @@ import { randomInt } from 'node:crypto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { buildPaginationMeta } from '../common/dto/pagination.dto';
+import { CollectionResult } from '../common/api-response';
+import {
+  type BrowserJudgedSubmissionDto,
+  judgeOutputs,
+  MAX_TEST_CASES,
+} from './browser-judge';
 
 const ROUND_DURATION_MS = 10 * 60 * 1000;
+/** ห้องที่ไม่มีใครเข้าร่วมภายในเวลานี้ถูกปิดอัตโนมัติ */
+const WAITING_ROOM_TTL_MS = 30 * 60 * 1000;
+const ROUNDS_PER_MATCH = 3;
 const ELO_K_FACTOR = 32;
 const MATCH_QUEUE_LOCK_ID = 81372041;
+const PARTICIPANT = {
+  select: { id: true, displayName: true, eloRating: true },
+} as const;
+
+export type RoomFilter = 'WAITING' | 'ACTIVE';
 
 @Injectable()
 export class MatchesService {
@@ -40,16 +55,9 @@ export class MatchesService {
         },
       });
       if (activeMatch) return;
+      await this.assertNotHosting(tx, user.id);
 
-      const problems = await tx.problem.findMany({
-        where: { isActive: true, testCases: { some: {} } },
-        select: { id: true },
-      });
-      if (problems.length < 3) {
-        throw new BadRequestException(
-          'At least three active problems with test cases are required to start a match',
-        );
-      }
+      const selectedProblems = await this.pickProblems(tx);
 
       const opponent = await tx.matchQueue.findFirst({
         where: { playerId: { not: user.id } },
@@ -64,19 +72,11 @@ export class MatchesService {
         return;
       }
 
-      const selectedProblems = this.randomSample(problems, 3);
       const match = await tx.match.create({
         data: {
           playerOneId: opponent.playerId,
           playerTwoId: user.id,
-          rounds: {
-            create: selectedProblems.map((problem, index) => ({
-              problemId: problem.id,
-              roundNumber: index + 1,
-              status: MatchRoundStatus.PENDING,
-              endsAt: null,
-            })),
-          },
+          rounds: { create: this.roundsFor(selectedProblems) },
         },
       });
 
@@ -87,6 +87,187 @@ export class MatchesService {
     });
 
     return this.getCurrent(coreUserId);
+  }
+
+  /** สร้างห้องให้คนอื่นเลือกเข้าร่วม — เลือกโจทย์เอง 3 ข้อ หรือให้ระบบสุ่ม */
+  async createRoom(
+    coreUserId: string,
+    title: string | undefined,
+    problemIds: string[] | undefined,
+  ) {
+    const user = await this.usersService.ensureUser(coreUserId);
+    const room = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${MATCH_QUEUE_LOCK_ID})::text`;
+      await this.assertFree(tx, user.id);
+      const selected = await this.pickProblems(tx, problemIds);
+      await tx.matchQueue.deleteMany({ where: { playerId: user.id } });
+      return tx.match.create({
+        data: {
+          playerOneId: user.id,
+          title: title?.trim() || null,
+          status: MatchStatus.WAITING,
+          rounds: { create: this.roundsFor(selected) },
+        },
+        select: { id: true },
+      });
+    });
+    return this.getMatch(room.id, coreUserId);
+  }
+
+  /** รายการห้อง: WAITING = ห้องที่รอคู่แข่ง · ACTIVE = กำลังแข่ง (ดูสถานะได้ เข้าร่วมไม่ได้) */
+  async listRooms(
+    coreUserId: string,
+    status: RoomFilter,
+    page: number,
+    take: number,
+  ) {
+    const user = await this.usersService.ensureUser(coreUserId);
+    const where: Prisma.MatchWhereInput = {
+      status: MatchStatus[status],
+      ...(status === 'WAITING'
+        ? { createdAt: { gt: new Date(Date.now() - WAITING_ROOM_TTL_MS) } }
+        : {}),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.match.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        skip: (page - 1) * take,
+        take,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          createdAt: true,
+          playerOne: PARTICIPANT,
+          playerTwo: PARTICIPANT,
+          rounds: {
+            select: { roundNumber: true, status: true, winnerId: true },
+          },
+        },
+      }),
+      this.prisma.match.count({ where }),
+    ]);
+    const data = rows.map((row) => {
+      const wins = (playerId: string | undefined) =>
+        row.rounds.filter(
+          (round) =>
+            round.status === MatchRoundStatus.WON &&
+            round.winnerId === playerId,
+        ).length;
+      const active = row.rounds.find(
+        (round) => round.status === MatchRoundStatus.ACTIVE,
+      );
+      return {
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        createdAt: row.createdAt,
+        playerOne: row.playerOne,
+        playerTwo: row.playerTwo,
+        isMine: row.playerOne.id === user.id || row.playerTwo?.id === user.id,
+        currentRound: active?.roundNumber ?? null,
+        playerOneWins: wins(row.playerOne.id),
+        playerTwoWins: wins(row.playerTwo?.id),
+      };
+    });
+    return new CollectionResult(data, buildPaginationMeta(total, page, take));
+  }
+
+  /** เข้าร่วมห้อง — คนแรกที่กดได้ห้องนั้น แล้วเข้าสู่ขั้น "พร้อม" เหมือนจับคู่ด่วน */
+  async joinRoom(matchId: string, coreUserId: string) {
+    const user = await this.usersService.ensureUser(coreUserId);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${MATCH_QUEUE_LOCK_ID})::text`;
+      const room = await tx.match.findUnique({
+        where: { id: matchId },
+        select: {
+          playerOneId: true,
+          playerTwoId: true,
+          status: true,
+          createdAt: true,
+        },
+      });
+      if (!room) throw new NotFoundException('ไม่พบห้องนี้');
+      if (room.playerOneId === user.id || room.playerTwoId === user.id) return;
+      if (
+        room.status !== MatchStatus.WAITING ||
+        room.createdAt.getTime() < Date.now() - WAITING_ROOM_TTL_MS
+      ) {
+        throw new ConflictException('ห้องนี้มีคู่แข่งแล้วหรือถูกปิดไปแล้ว');
+      }
+      await this.assertFree(tx, user.id);
+      await tx.matchQueue.deleteMany({ where: { playerId: user.id } });
+      await tx.match.update({
+        where: { id: matchId },
+        data: { playerTwoId: user.id, status: MatchStatus.ACTIVE },
+      });
+    });
+    return this.getMatch(matchId, coreUserId);
+  }
+
+  /** เจ้าของห้องปิดห้องที่ยังไม่มีคู่แข่ง */
+  async cancelRoom(matchId: string, coreUserId: string) {
+    const user = await this.usersService.ensureUser(coreUserId);
+    const room = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      select: { playerOneId: true },
+    });
+    if (!room) throw new NotFoundException('ไม่พบห้องนี้');
+    if (room.playerOneId !== user.id) {
+      throw new ForbiddenException('ปิดได้เฉพาะห้องที่คุณสร้าง');
+    }
+    const deleted = await this.prisma.match.deleteMany({
+      where: { id: matchId, status: MatchStatus.WAITING },
+    });
+    if (!deleted.count) {
+      throw new ConflictException('ห้องนี้เริ่มแข่งแล้ว ปิดไม่ได้');
+    }
+    return { id: matchId, deleted: true as const };
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE, { timeZone: 'Asia/Bangkok' })
+  async closeStaleRooms() {
+    await this.prisma.match.deleteMany({
+      where: {
+        status: MatchStatus.WAITING,
+        createdAt: { lt: new Date(Date.now() - WAITING_ROOM_TTL_MS) },
+      },
+    });
+  }
+
+  /** input ของชุดทดสอบในข้อที่กำลังแข่ง ให้เบราว์เซอร์รันโค้ด — expected output ไม่ส่งออกไป */
+  async testInputs(matchId: string, coreUserId: string) {
+    const user = await this.usersService.ensureUser(coreUserId);
+    const round = await this.prisma.matchRound.findFirst({
+      where: {
+        matchId,
+        status: MatchRoundStatus.ACTIVE,
+        match: {
+          status: MatchStatus.ACTIVE,
+          OR: [{ playerOneId: user.id }, { playerTwoId: user.id }],
+        },
+      },
+      select: {
+        problem: {
+          select: {
+            id: true,
+            timeLimitMs: true,
+            testCases: { orderBy: { id: 'asc' }, select: { inputData: true } },
+          },
+        },
+      },
+    });
+    if (!round) {
+      throw new ConflictException('There is no active round for this match');
+    }
+    return {
+      problemId: round.problem.id,
+      timeLimitMs: round.problem.timeLimitMs,
+      inputs: round.problem.testCases
+        .slice(0, MAX_TEST_CASES)
+        .map((testCase) => testCase.inputData),
+    };
   }
 
   async markReady(matchId: string, coreUserId: string) {
@@ -160,6 +341,16 @@ export class MatchesService {
     });
     if (activeMatch) return this.getMatch(activeMatch.id, coreUserId);
 
+    const hosted = await this.prisma.match.findFirst({
+      where: {
+        status: MatchStatus.WAITING,
+        playerOneId: user.id,
+        createdAt: { gt: new Date(Date.now() - WAITING_ROOM_TTL_MS) },
+      },
+      select: { id: true },
+    });
+    if (hosted) return { state: 'hosting' as const, id: hosted.id };
+
     const queueEntry = await this.prisma.matchQueue.findUnique({
       where: { playerId: user.id },
     });
@@ -185,8 +376,8 @@ export class MatchesService {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
       include: {
-        playerOne: { select: { id: true, displayName: true, eloRating: true } },
-        playerTwo: { select: { id: true, displayName: true, eloRating: true } },
+        playerOne: PARTICIPANT,
+        playerTwo: PARTICIPANT,
         rounds: {
           orderBy: { roundNumber: 'asc' },
           include: {
@@ -195,6 +386,7 @@ export class MatchesService {
               select: {
                 id: true,
                 status: true,
+                language: true,
                 createdAt: true,
                 evaluatedAt: true,
               },
@@ -221,8 +413,10 @@ export class MatchesService {
     const activeRound = match.rounds.find(
       (round) => round.status === MatchRoundStatus.ACTIVE,
     );
+    // ห้องที่รอคู่แข่งและข้อที่ยังไม่ถึง ไม่เปิดเผยโจทย์
     const visibleRounds =
-      match.status === MatchStatus.ACTIVE
+      match.status === MatchStatus.ACTIVE ||
+      match.status === MatchStatus.WAITING
         ? match.rounds.filter(
             (round) => round.roundNumber <= (activeRound?.roundNumber ?? 0),
           )
@@ -231,6 +425,7 @@ export class MatchesService {
     return {
       state: 'matched' as const,
       id: match.id,
+      title: match.title,
       status: match.status,
       winnerId: match.winnerId,
       myPlayerId: user.id,
@@ -241,14 +436,14 @@ export class MatchesService {
     };
   }
 
+  /** รับผลที่เบราว์เซอร์รันมา แล้วตัดสินทันทีจาก expected output ที่เก็บใน server */
   async submit(
     matchId: string,
     coreUserId: string,
-    problemId: string,
-    sourceCode: string,
+    dto: BrowserJudgedSubmissionDto,
   ) {
     const user = await this.usersService.ensureUser(coreUserId);
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM match_rounds WHERE match_id = ${matchId} AND status = 'ACTIVE' FOR UPDATE`;
       const round = await tx.matchRound.findFirst({
         where: {
@@ -259,12 +454,21 @@ export class MatchesService {
             OR: [{ playerOneId: user.id }, { playerTwoId: user.id }],
           },
         },
-        include: { problem: { select: { id: true } } },
+        include: {
+          problem: {
+            select: {
+              testCases: {
+                orderBy: { id: 'asc' },
+                select: { expectedOutput: true },
+              },
+            },
+          },
+        },
       });
       if (!round) {
         throw new ConflictException('There is no active round for this match');
       }
-      if (round.problemId !== problemId) {
+      if (round.problemId !== dto.problemId) {
         throw new BadRequestException(
           'Submission problem does not match the active round',
         );
@@ -273,26 +477,42 @@ export class MatchesService {
         throw new ConflictException('The active round has expired');
       }
 
-      const outstanding = await tx.submission.count({
-        where: {
-          matchRoundId: round.id,
-          studentId: user.id,
-          status: {
-            in: [SubmissionStatus.PENDING, SubmissionStatus.EVALUATING],
-          },
-        },
-      });
-      if (outstanding)
-        throw new ConflictException('Please wait for your previous submission');
-      return tx.submission.create({
+      const verdict = judgeOutputs(
+        round.problem.testCases
+          .slice(0, MAX_TEST_CASES)
+          .map((testCase) => testCase.expectedOutput),
+        dto.outcome,
+        dto.outputs,
+      );
+      if (!verdict) {
+        throw new BadRequestException(
+          'จำนวนผลลัพธ์ไม่ตรงกับจำนวนชุดทดสอบ กรุณาโหลดหน้าใหม่แล้วส่งอีกครั้ง',
+        );
+      }
+      const evaluatedAt = new Date();
+      const submission = await tx.submission.create({
         data: {
           studentId: user.id,
-          problemId,
+          problemId: dto.problemId,
           matchRoundId: round.id,
-          sourceCode,
+          sourceCode: dto.sourceCode,
+          language: dto.language,
+          status: verdict.status,
+          evaluationStartedAt: evaluatedAt,
+          evaluatedAt,
+        },
+        select: {
+          id: true,
+          status: true,
+          language: true,
+          createdAt: true,
+          evaluatedAt: true,
         },
       });
+      return { ...submission, failedTest: verdict.failedTest };
     });
+    await this.recordEvaluation(result.id, result.evaluatedAt ?? new Date());
+    return result;
   }
 
   async recordEvaluation(submissionId: string, evaluatedAt: Date) {
@@ -337,6 +557,7 @@ export class MatchesService {
         return;
       }
 
+      // ตรวจแบบทันที (ไม่มีคิวรอตรวจ) — คำตอบถูกที่ส่งก่อนหมดเวลาคนแรกชนะ
       const acceptedBeforeDeadline = await tx.submission.findFirst({
         where: {
           matchRoundId: round.id,
@@ -346,20 +567,6 @@ export class MatchesService {
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       });
       if (!acceptedBeforeDeadline && evaluatedAt < round.endsAt) return;
-      {
-        const outstandingEvaluations = await tx.submission.count({
-          where: {
-            matchRoundId: round.id,
-            status: {
-              in: [SubmissionStatus.PENDING, SubmissionStatus.EVALUATING],
-            },
-            createdAt: {
-              lte: acceptedBeforeDeadline?.createdAt ?? round.endsAt,
-            },
-          },
-        });
-        if (outstandingEvaluations > 0) return;
-      }
 
       const winnerId = acceptedBeforeDeadline?.studentId ?? null;
       await tx.matchRound.update({
@@ -393,7 +600,7 @@ export class MatchesService {
         await this.completeMatch(tx, round.match, winnerId);
         return;
       }
-      if (roundsResolved === 3) {
+      if (roundsResolved === ROUNDS_PER_MATCH) {
         await this.completeMatch(tx, round.match, null);
         return;
       }
@@ -419,11 +626,13 @@ export class MatchesService {
 
   private async completeMatch(
     tx: Prisma.TransactionClient,
-    match: { id: string; playerOneId: string; playerTwoId: string },
+    match: { id: string; playerOneId: string; playerTwoId: string | null },
     winnerId: string | null,
   ) {
     const players = await tx.playerRating.findMany({
-      where: { id: { in: [match.playerOneId, match.playerTwoId] } },
+      where: {
+        id: { in: [match.playerOneId, match.playerTwoId ?? match.playerOneId] },
+      },
       select: { id: true, eloRating: true },
     });
     const playerOne = players.find((player) => player.id === match.playerOneId);
@@ -460,6 +669,74 @@ export class MatchesService {
         completedAt: new Date(),
       },
     });
+  }
+
+  /** เปิดห้องหรือเข้าร่วมได้ทีละห้อง — ต้องไม่มีห้องที่รออยู่หรือการแข่งที่ยังไม่จบ */
+  private async assertFree(tx: Prisma.TransactionClient, playerId: string) {
+    const busy = await tx.match.findFirst({
+      where: {
+        status: { in: [MatchStatus.WAITING, MatchStatus.ACTIVE] },
+        OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
+      },
+      select: { id: true },
+    });
+    if (busy) {
+      throw new ConflictException('คุณมีห้องหรือการแข่งขันที่ยังไม่จบอยู่แล้ว');
+    }
+  }
+
+  private async assertNotHosting(
+    tx: Prisma.TransactionClient,
+    playerId: string,
+  ) {
+    const hosting = await tx.match.findFirst({
+      where: { status: MatchStatus.WAITING, playerOneId: playerId },
+      select: { id: true },
+    });
+    if (hosting) {
+      throw new ConflictException('ปิดห้องที่คุณสร้างไว้ก่อนเข้าคิวจับคู่ด่วน');
+    }
+  }
+
+  /** โจทย์ 3 ข้อของการแข่ง: ที่ผู้สร้างห้องเลือก (ต้องเปิดอยู่และมีชุดทดสอบ) หรือสุ่ม */
+  private async pickProblems(
+    tx: Prisma.TransactionClient,
+    chosen?: string[],
+  ): Promise<{ id: string }[]> {
+    const problems = await tx.problem.findMany({
+      where: {
+        isActive: true,
+        testCases: { some: {} },
+        ...(chosen?.length ? { id: { in: chosen } } : {}),
+      },
+      select: { id: true },
+    });
+    if (chosen?.length) {
+      if (
+        new Set(chosen).size !== ROUNDS_PER_MATCH ||
+        problems.length !== ROUNDS_PER_MATCH
+      ) {
+        throw new BadRequestException(
+          'เลือกโจทย์ที่เปิดอยู่และมีชุดทดสอบให้ครบ 3 ข้อไม่ซ้ำกัน',
+        );
+      }
+      return chosen.map((id) => ({ id }));
+    }
+    if (problems.length < ROUNDS_PER_MATCH) {
+      throw new BadRequestException(
+        'At least three active problems with test cases are required to start a match',
+      );
+    }
+    return this.randomSample(problems, ROUNDS_PER_MATCH);
+  }
+
+  private roundsFor(problems: { id: string }[]) {
+    return problems.map((problem, index) => ({
+      problemId: problem.id,
+      roundNumber: index + 1,
+      status: MatchRoundStatus.PENDING,
+      endsAt: null,
+    }));
   }
 
   private randomSample<T>(items: T[], count: number): T[] {

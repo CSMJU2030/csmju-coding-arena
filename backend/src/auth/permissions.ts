@@ -5,15 +5,15 @@ export enum Permission {
   TEST_CASE_READ='test-case:read:any', TEST_CASE_CREATE='test-case:create',
   TEST_CASE_UPDATE='test-case:update:any', TEST_CASE_DELETE='test-case:delete:any',
   MATCH_PLAY='match:play:own', SUBMISSION_CREATE='submission:create:own', LEADERBOARD_READ='leaderboard:read',
-  LANGUAGE_READ='language:read', CODE_RUN_CREATE='code-run:create:own', CSS_GAME_PLAY='css-game:play:own',
+  CSS_GAME_PLAY='css-game:play:own',
 }
 export const ROLE_PERMISSIONS: Readonly<Record<SubsystemRole,readonly Permission[]>> = {
-  [SubsystemRole.STUDENT]: [Permission.PROBLEM_READ,Permission.MATCH_PLAY,Permission.SUBMISSION_CREATE,Permission.LEADERBOARD_READ,Permission.LANGUAGE_READ,Permission.CODE_RUN_CREATE,Permission.CSS_GAME_PLAY],
-  [SubsystemRole.STAFF]: [Permission.PROBLEM_READ,Permission.PROBLEM_MANAGE,Permission.PROBLEM_CREATE,Permission.PROBLEM_UPDATE,Permission.PROBLEM_DELETE,Permission.TEST_CASE_READ,Permission.TEST_CASE_CREATE,Permission.TEST_CASE_UPDATE,Permission.TEST_CASE_DELETE,Permission.LEADERBOARD_READ,Permission.LANGUAGE_READ,Permission.CODE_RUN_CREATE,Permission.CSS_GAME_PLAY],
-  // ศิษย์เก่า / ผู้เยี่ยมชม: ดูโจทย์ อันดับ และใช้คอมไพเลอร์ออนไลน์ — แข่งและแก้โจทย์ไม่ได้
-  [SubsystemRole.ALUMNI]: [Permission.PROBLEM_READ,Permission.LEADERBOARD_READ,Permission.LANGUAGE_READ,Permission.CODE_RUN_CREATE,Permission.CSS_GAME_PLAY],
+  [SubsystemRole.STUDENT]: [Permission.PROBLEM_READ,Permission.MATCH_PLAY,Permission.SUBMISSION_CREATE,Permission.LEADERBOARD_READ,Permission.CSS_GAME_PLAY],
+  [SubsystemRole.STAFF]: [Permission.PROBLEM_READ,Permission.PROBLEM_MANAGE,Permission.PROBLEM_CREATE,Permission.PROBLEM_UPDATE,Permission.PROBLEM_DELETE,Permission.TEST_CASE_READ,Permission.TEST_CASE_CREATE,Permission.TEST_CASE_UPDATE,Permission.TEST_CASE_DELETE,Permission.LEADERBOARD_READ,Permission.CSS_GAME_PLAY],
+  // ศิษย์เก่า / ผู้เยี่ยมชม: ดูโจทย์ อันดับ และเล่นเกม CSS — แข่งและแก้โจทย์ไม่ได้
+  [SubsystemRole.ALUMNI]: [Permission.PROBLEM_READ,Permission.LEADERBOARD_READ,Permission.CSS_GAME_PLAY],
   // ผู้ดูแลระบบ: จัดการโจทย์และชุดทดสอบเหมือนอาจารย์
-  [SubsystemRole.ADMIN]: [Permission.PROBLEM_READ,Permission.PROBLEM_MANAGE,Permission.PROBLEM_CREATE,Permission.PROBLEM_UPDATE,Permission.PROBLEM_DELETE,Permission.TEST_CASE_READ,Permission.TEST_CASE_CREATE,Permission.TEST_CASE_UPDATE,Permission.TEST_CASE_DELETE,Permission.LEADERBOARD_READ,Permission.LANGUAGE_READ,Permission.CODE_RUN_CREATE,Permission.CSS_GAME_PLAY],
+  [SubsystemRole.ADMIN]: [Permission.PROBLEM_READ,Permission.PROBLEM_MANAGE,Permission.PROBLEM_CREATE,Permission.PROBLEM_UPDATE,Permission.PROBLEM_DELETE,Permission.TEST_CASE_READ,Permission.TEST_CASE_CREATE,Permission.TEST_CASE_UPDATE,Permission.TEST_CASE_DELETE,Permission.LEADERBOARD_READ,Permission.CSS_GAME_PLAY],
 };
 export function can(role:SubsystemRole,permission:Permission):boolean { return ROLE_PERMISSIONS[role]?.includes(permission)??false; }
 export function canAny(role:SubsystemRole,permissions:readonly Permission[]):boolean {return permissions.some(p=>can(role,p));}

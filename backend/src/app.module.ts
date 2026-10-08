@@ -15,9 +15,7 @@ import { UsersModule } from './users/users.module';
 import { ProblemsModule } from './problems/problems.module';
 import { SubmissionsModule } from './submissions/submissions.module';
 import { TestCasesModule } from './test-cases/test-cases.module';
-import { EvaluationModule } from './evaluation/evaluation.module';
 import { MatchesModule } from './matches/matches.module';
-import { LanguagesModule } from './languages/languages.module';
 import { LevelClearsModule } from './level-clears/level-clears.module';
 import { HealthController } from './health.controller';
 
@@ -35,9 +33,7 @@ import { HealthController } from './health.controller';
     ProblemsModule,
     SubmissionsModule,
     TestCasesModule,
-    EvaluationModule,
     MatchesModule,
-    LanguagesModule,
     LevelClearsModule,
   ],
   controllers: [HealthController],

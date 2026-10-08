@@ -164,6 +164,22 @@ export interface paths {
         patch: operations["ProblemsController_updateProblem"];
         trace?: never;
     };
+    "/api/v1/problems/{id}/test-inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ProblemsController_getTestInputs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/submissions": {
         parameters: {
             query?: never;
@@ -228,6 +244,22 @@ export interface paths {
         patch: operations["TestCasesController_updateTestCase"];
         trace?: never;
     };
+    "/api/v1/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MatchesController_listRooms"];
+        put?: never;
+        post: operations["MatchesController_createRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/matches/queue": {
         parameters: {
             query?: never;
@@ -270,6 +302,38 @@ export interface paths {
         get: operations["MatchesController_getMatch"];
         put?: never;
         post?: never;
+        delete: operations["MatchesController_cancelRoom"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/matches/{matchId}/participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MatchesController_joinRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/matches/{matchId}/test-inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MatchesController_testInputs"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -302,38 +366,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["MatchesController_markReady"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/languages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["LanguagesController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/code-runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CodeRunsController_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -425,18 +457,42 @@ export interface components {
             title: string;
             timeLimitMs: number;
         };
-        SubmissionDto: {
+        TestInputsDto: {
+            problemId: string;
+            timeLimitMs: number;
+            inputs: string[];
+        };
+        JudgedSubmissionDto: {
             id: string;
             /** @enum {string} */
             status: "PENDING" | "EVALUATING" | "ACCEPTED" | "WRONG_ANSWER" | "TIME_LIMIT_EXCEEDED" | "RUNTIME_ERROR" | "COMPILATION_ERROR";
+            /** @enum {string} */
+            language?: "PYTHON" | "JAVASCRIPT" | "TYPESCRIPT";
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             evaluatedAt: string | null;
+            failedTest: number | null;
         };
-        CreateSubmissionDto: {
+        BrowserJudgedSubmissionDto: {
             problemId: string;
             sourceCode: string;
+            /** @enum {string} */
+            language: "JAVASCRIPT" | "TYPESCRIPT";
+            /** @enum {string} */
+            outcome: "COMPLETED" | "RUNTIME_ERROR" | "TIME_LIMIT_EXCEEDED" | "COMPILATION_ERROR";
+            outputs: string[];
+        };
+        SubmissionDto: {
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "EVALUATING" | "ACCEPTED" | "WRONG_ANSWER" | "TIME_LIMIT_EXCEEDED" | "RUNTIME_ERROR" | "COMPILATION_ERROR";
+            /** @enum {string} */
+            language?: "PYTHON" | "JAVASCRIPT" | "TYPESCRIPT";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            evaluatedAt: string | null;
         };
         TestCaseDto: {
             id: string;
@@ -456,16 +512,24 @@ export interface components {
             expectedOutput?: string;
             isHidden?: boolean;
         };
-        QueueStateDto: {
-            /** @enum {string} */
-            state: "idle" | "waiting" | "matched";
-            id?: string;
-            position?: number;
-        };
         ParticipantDto: {
             id: string;
             displayName: string;
             eloRating: number;
+        };
+        MatchRoomDto: {
+            id: string;
+            title: string | null;
+            /** @enum {string} */
+            status: "WAITING" | "ACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            playerOne: components["schemas"]["ParticipantDto"];
+            playerTwo: components["schemas"]["ParticipantDto"] | null;
+            isMine: boolean;
+            currentRound: number | null;
+            playerOneWins: number;
+            playerTwoWins: number;
         };
         MatchRoundDto: {
             id: string;
@@ -482,48 +546,25 @@ export interface components {
             /** @enum {string} */
             state: "matched";
             id: string;
+            title: string | null;
             /** @enum {string} */
-            status: "ACTIVE" | "COMPLETED" | "DRAW";
+            status: "WAITING" | "ACTIVE" | "COMPLETED" | "DRAW";
             winnerId: string | null;
             myPlayerId: string;
             playerOne: components["schemas"]["ParticipantDto"];
-            playerTwo: components["schemas"]["ParticipantDto"];
+            playerTwo: components["schemas"]["ParticipantDto"] | null;
             currentRound: number | null;
             rounds: components["schemas"]["MatchRoundDto"][];
         };
-        CreateMatchSubmissionDto: {
-            problemId: string;
-            sourceCode: string;
+        CreateMatchRoomDto: {
+            title?: string;
+            problemIds?: string[];
         };
-        LanguageDto: {
-            id: string;
-            name: string;
+        QueueStateDto: {
             /** @enum {string} */
-            category: "popular" | "systems" | "jvm" | "dotnet" | "scripting" | "shell" | "functional" | "lisp" | "logic" | "classic" | "esoteric" | "web" | "data";
-            file: string;
-            extension: string;
-            /** @enum {string} */
-            runtime: "sandbox" | "browser";
-            compiled: boolean;
-            template: string;
-            stdin: string;
-        };
-        CodeRunDto: {
-            language: string;
-            /** @enum {string} */
-            status: "OK" | "COMPILE_ERROR" | "RUNTIME_ERROR" | "TIME_LIMIT_EXCEEDED" | "OUTPUT_LIMIT_EXCEEDED" | "MEMORY_LIMIT_EXCEEDED";
-            exitCode: number | null;
-            stdout: string;
-            stderr: string;
-            compileOutput: string;
-            timeMs: number;
-            truncated?: boolean;
-        };
-        CreateCodeRunDto: {
-            /** @example python */
-            language: string;
-            code: string;
-            stdin?: string;
+            state: "idle" | "waiting" | "hosting" | "matched";
+            id?: string;
+            position?: number;
         };
         LevelClearDto: {
             id: string;
@@ -860,6 +901,31 @@ export interface operations {
             };
         };
     };
+    ProblemsController_getTestInputs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["TestInputsDto"];
+                    };
+                };
+            };
+        };
+    };
     SubmissionsController_getSubmissions: {
         parameters: {
             query?: never;
@@ -898,7 +964,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateSubmissionDto"];
+                "application/json": components["schemas"]["BrowserJudgedSubmissionDto"];
             };
         };
         responses: {
@@ -910,7 +976,7 @@ export interface operations {
                     "application/json": {
                         /** @enum {boolean} */
                         success: true;
-                        data: components["schemas"]["SubmissionDto"];
+                        data: components["schemas"]["JudgedSubmissionDto"];
                     };
                 };
             };
@@ -1028,6 +1094,64 @@ export interface operations {
             };
         };
     };
+    MatchesController_listRooms: {
+        parameters: {
+            query?: {
+                status?: "WAITING" | "ACTIVE";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["MatchRoomDto"][];
+                        meta: {
+                            total: number;
+                            page: number;
+                            limit: number;
+                            totalPages: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    MatchesController_createRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMatchRoomDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["MatchDto"];
+                    };
+                };
+            };
+        };
+    };
     MatchesController_joinQueue: {
         parameters: {
             query?: never;
@@ -1122,6 +1246,81 @@ export interface operations {
             };
         };
     };
+    MatchesController_cancelRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["DeletedDto"];
+                    };
+                };
+            };
+        };
+    };
+    MatchesController_joinRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["MatchDto"];
+                    };
+                };
+            };
+        };
+    };
+    MatchesController_testInputs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["TestInputsDto"];
+                    };
+                };
+            };
+        };
+    };
     MatchesController_submit: {
         parameters: {
             query?: never;
@@ -1133,7 +1332,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateMatchSubmissionDto"];
+                "application/json": components["schemas"]["BrowserJudgedSubmissionDto"];
             };
         };
         responses: {
@@ -1145,7 +1344,7 @@ export interface operations {
                     "application/json": {
                         /** @enum {boolean} */
                         success: true;
-                        data: components["schemas"]["SubmissionDto"];
+                        data: components["schemas"]["JudgedSubmissionDto"];
                     };
                 };
             };
@@ -1171,62 +1370,6 @@ export interface operations {
                         /** @enum {boolean} */
                         success: true;
                         data: components["schemas"]["MatchDto"];
-                    };
-                };
-            };
-        };
-    };
-    LanguagesController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @enum {boolean} */
-                        success: true;
-                        data: components["schemas"]["LanguageDto"][];
-                        meta: {
-                            total: number;
-                            page: number;
-                            limit: number;
-                            totalPages: number;
-                        };
-                    };
-                };
-            };
-        };
-    };
-    CodeRunsController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCodeRunDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @enum {boolean} */
-                        success: true;
-                        data: components["schemas"]["CodeRunDto"];
                     };
                 };
             };

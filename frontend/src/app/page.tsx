@@ -1,11 +1,11 @@
 "use client";
 
-import { Code2, Gamepad2, Languages, Swords, Trophy, type LucideIcon } from "lucide-react";
+import { Code2, Gamepad2, Swords, Trophy, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PixelScene } from "@/components/pixel-scene";
 import { ErrorState, LoadingState } from "@/components/ui";
-import { ApiRequestError, apiCollection, apiRequest } from "@/lib/api";
+import { ApiRequestError, apiRequest } from "@/lib/api";
 import { canManage, canPlay, type RoleProfile } from "@/lib/roles";
 
 type Profile = RoleProfile;
@@ -24,7 +24,7 @@ type State =
   | { status: "guest" }
   | { status: "forbidden" }
   | { status: "error"; message: string }
-  | { status: "ready"; profile: Profile; languages: number };
+  | { status: "ready"; profile: Profile };
 
 export default function Lobby() {
   const [state, setState] = useState<State>({ status: "loading" });
@@ -32,9 +32,8 @@ export default function Lobby() {
   useEffect(() => {
     let active = true;
     apiRequest<Profile>("/api/v1/me")
-      .then(async (profile) => {
-        const languages = await apiCollection<{ id: string }>("/api/v1/languages").catch(() => []);
-        if (active) setState({ status: "ready", profile, languages: languages.length });
+      .then((profile) => {
+        if (active) setState({ status: "ready", profile });
       })
       .catch((error: unknown) => {
         if (!active) return;
@@ -54,7 +53,7 @@ export default function Lobby() {
     {
       href: "/student",
       title: "ประลอง 1 ต่อ 1",
-      detail: "จับคู่กับเพื่อน แก้โจทย์ชุดเดียวกัน ชนะ 2 ใน 3 ข้อ เก็บคะแนน Elo ไต่อันดับ",
+      detail: "สร้างห้องหรือเลือกห้องที่เพื่อนเปิดไว้ แข่งแก้โจทย์ชุดเดียวกันด้วย JavaScript หรือ TypeScript ชนะ 2 ใน 3 ข้อ เก็บ Elo",
       icon: Swords,
       tone: "bg-primary-container text-on-primary",
       allowed: canPlay,
@@ -68,20 +67,10 @@ export default function Lobby() {
     },
     {
       href: "/playground",
-      title: "คอมไพเลอร์ออนไลน์",
-      detail:
-        state.status === "ready" && state.languages
-          ? `เขียนและรันโค้ดได้ ${state.languages} ภาษา ตั้งแต่ Python, C, Java ไปจน COBOL และ Brainfuck`
-          : "เขียนและรันโค้ดหลายภาษาในหน้าเดียว",
+      title: "สนามเขียนโค้ด",
+      detail: "เขียนและรัน JavaScript หรือทำหน้าเว็บ HTML/CSS ดูผลทันที — รันในเบราว์เซอร์ของคุณ",
       icon: Code2,
       tone: "bg-brand-amber text-brand-navy",
-    },
-    {
-      href: "/languages",
-      title: "ภาษาทั้งหมด",
-      detail: "ดูรายชื่อภาษาแยกตามกลุ่ม พร้อมโค้ดตัวอย่างที่กดรันได้ทันที",
-      icon: Languages,
-      tone: "bg-success text-white",
     },
     {
       href: "/teacher/problems",
@@ -103,7 +92,7 @@ export default function Lobby() {
           <p className="pixel-font text-label-md text-brand-amber">CSMJU2030 · PRESS START</p>
           <h1 className="pixel-font text-headline-lg md:text-display-lg">CODING ARENA</h1>
           <p className="max-w-2xl text-body-lg text-white/85">
-            สนามประลองเขียนโปรแกรมของสาขาวิทยาการคอมพิวเตอร์ — แข่งตัวต่อตัว ฝึกในคอมไพเลอร์หลายภาษา และไต่อันดับ
+            สนามฝึกเขียนโปรแกรมของสาขาวิทยาการคอมพิวเตอร์ — เปิดห้องประลองโค้ด 1 ต่อ 1 เล่นเกม CSS เก็บ XP และเขียนโค้ดได้ทันทีในเบราว์เซอร์
           </p>
           {state.status === "guest" && (
             <a href="/auth/login?next=%2F" className="pixel-button inline-flex min-h-12 items-center gap-2 bg-brand-amber px-6 font-bold text-brand-navy">

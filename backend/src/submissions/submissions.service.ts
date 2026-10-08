@@ -10,6 +10,11 @@ import {
   buildPaginationMeta,
 } from '../common/dto/pagination.dto';
 import { CollectionResult } from '../common/api-response';
+import {
+  type BrowserJudgedSubmissionDto,
+  judgeOutputs,
+  MAX_TEST_CASES,
+} from '../matches/browser-judge';
 
 @Injectable()
 export class SubmissionsService {
@@ -18,22 +23,53 @@ export class SubmissionsService {
     private usersService: UsersService,
   ) {}
 
-  async submit(coreUserId: string, problemId: string, sourceCode: string) {
+  /** คำตอบฝึกซ้อม: เบราว์เซอร์รันมาแล้ว server เทียบกับ expected output แล้วตัดสินทันที */
+  async submit(coreUserId: string, dto: BrowserJudgedSubmissionDto) {
     const student = await this.usersService.ensureUser(coreUserId);
     const problem = await this.prisma.problem.findFirst({
-      where: { id: problemId, isActive: true },
-      include: { _count: { select: { testCases: true } } },
-    });
-    if (!problem) throw new NotFoundException('Problem not found');
-    if (!problem._count.testCases)
-      throw new BadRequestException('Problem has no test cases');
-    return this.prisma.submission.create({
-      data: {
-        studentId: student.id,
-        problemId,
-        sourceCode,
+      where: { id: dto.problemId, isActive: true },
+      select: {
+        testCases: {
+          orderBy: { id: 'asc' },
+          select: { expectedOutput: true },
+        },
       },
     });
+    if (!problem) throw new NotFoundException('Problem not found');
+    if (!problem.testCases.length)
+      throw new BadRequestException('Problem has no test cases');
+    const verdict = judgeOutputs(
+      problem.testCases
+        .slice(0, MAX_TEST_CASES)
+        .map((testCase) => testCase.expectedOutput),
+      dto.outcome,
+      dto.outputs,
+    );
+    if (!verdict) {
+      throw new BadRequestException(
+        'จำนวนผลลัพธ์ไม่ตรงกับจำนวนชุดทดสอบ กรุณาโหลดหน้าใหม่แล้วส่งอีกครั้ง',
+      );
+    }
+    const evaluatedAt = new Date();
+    const submission = await this.prisma.submission.create({
+      data: {
+        studentId: student.id,
+        problemId: dto.problemId,
+        sourceCode: dto.sourceCode,
+        language: dto.language,
+        status: verdict.status,
+        evaluationStartedAt: evaluatedAt,
+        evaluatedAt,
+      },
+      select: {
+        id: true,
+        status: true,
+        language: true,
+        createdAt: true,
+        evaluatedAt: true,
+      },
+    });
+    return { ...submission, failedTest: verdict.failedTest };
   }
 
   async findAll(coreUserId: string, query = new PaginationQueryDto()) {

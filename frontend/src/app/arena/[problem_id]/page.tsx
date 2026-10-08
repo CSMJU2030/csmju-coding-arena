@@ -7,7 +7,12 @@ import { Button, Notice, ErrorState, LoadingState } from "@/components/ui";
 import { useState, useEffect, use } from "react";
 import { CodeEditor } from "@/components/code-editor";
 import { ApiRequestError, apiRequest } from "@/lib/api";
-import { runOnServer, STATUS_LABELS } from "@/lib/languages";
+import {
+  judgeAndSubmit,
+  JUDGE_LANGUAGES,
+  verdictMessage,
+  type JudgeLanguage,
+} from "@/lib/judge";
 
 type Problem = components["schemas"]["ProblemDto"];
 
@@ -23,12 +28,16 @@ export default function CodingArenaPage({
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [code, setCode] = useState<string>(
-    "import sys\ndata = sys.stdin.read().split()\nif data:\n    # เขียนโค้ดของคุณที่นี่\n    pass",
-  );
-  const [output, setOutput] = useState<string>("");
-  const [practiceInput, setPracticeInput] = useState<string>("");
-  const [isExecuting, setIsExecuting] = useState(false);
+  const [language, setLanguage] = useState<JudgeLanguage>("JAVASCRIPT");
+  const [code, setCode] = useState<string>(JUDGE_LANGUAGES[0].starter);
+  const [progress, setProgress] = useState("");
+
+  function changeLanguage(next: JudgeLanguage) {
+    const starter = (id: JudgeLanguage) =>
+      JUDGE_LANGUAGES.find((item) => item.id === id)?.starter ?? "";
+    if (code.trim() === starter(language).trim()) setCode(starter(next));
+    setLanguage(next);
+  }
 
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,31 +69,6 @@ export default function CodingArenaPage({
     fetchProblem();
   }, [problemId]);
 
-  // ทดลองรันในตัวรันโค้ด sandbox ของระบบ (image เดียวกับคอมไพเลอร์ออนไลน์) — ไม่โหลดอะไรจากเว็บภายนอก
-  const runCodeLocal = async () => {
-    if (!problem || isExecuting) return;
-    setIsExecuting(true);
-    setOutput("");
-    try {
-      const result = await runOnServer("python", code, practiceInput);
-      const parts = [
-        `[${STATUS_LABELS[result.status] ?? result.status} · ${result.timeMs} ms]`,
-        result.compileOutput,
-        result.stdout,
-        result.stderr && `[stderr]\n${result.stderr}`,
-      ].filter(Boolean);
-      setOutput(parts.join("\n"));
-    } catch (runError) {
-      setOutput(
-        runError instanceof ApiRequestError && runError.status === 503
-          ? "[ตัวรันโค้ดยังไม่พร้อม] ลองใหม่อีกครั้งภายหลัง"
-          : `[Error]: ${runError instanceof Error ? runError.message : "ทดลองรันไม่สำเร็จ"}`,
-      );
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
   const submitCode = async () => {
     if (cooldownRemaining > 0 || isSubmitting) return;
     setIsSubmitting(true);
@@ -92,11 +76,22 @@ export default function CodingArenaPage({
     setSubmissionError("");
 
     try {
-      await apiRequest("/api/v1/submissions", {
-        method: "POST",
-        body: JSON.stringify({ problemId, sourceCode: code }),
+      const { submission, run } = await judgeAndSubmit({
+        inputsPath: `/api/v1/problems/${problemId}/test-inputs`,
+        submitPath: "/api/v1/submissions",
+        problemId,
+        language,
+        code,
+        onProgress: (done, total) =>
+          setProgress(
+            done < total
+              ? `กำลังรันชุดทดสอบ ${done + 1}/${total} ในเบราว์เซอร์ของคุณ…`
+              : "กำลังส่งผลให้ server ตัดสิน…",
+          ),
       });
-      setNotice("ส่งคำตอบแล้ว ระบบกำลังตรวจคำตอบ กรุณารอสักครู่");
+      if (submission.status === "ACCEPTED")
+        setNotice(verdictMessage(submission, run));
+      else setSubmissionError(verdictMessage(submission, run));
     } catch (requestError) {
       setSubmissionError(
         requestError instanceof Error
@@ -105,6 +100,7 @@ export default function CodingArenaPage({
       );
     } finally {
       setIsSubmitting(false);
+      setProgress("");
     }
     setCooldownRemaining(3);
     const interval = setInterval(() => {
@@ -155,35 +151,27 @@ export default function CodingArenaPage({
         className="flex min-h-0 flex-col gap-4 min-w-0 xl:col-span-3"
       >
         <div className="h-80 min-w-0 overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest shadow-sm md:h-96">
-          <CodeEditor value={code} onChange={setCode} />
-        </div>
-
-        <div className="min-w-0">
-          <label htmlFor="practice-input" className="mb-1 block text-label-md text-on-surface">
-            ข้อมูลนำเข้าสำหรับทดลองรัน (stdin)
-          </label>
-          <textarea
-            id="practice-input"
-            rows={2}
-            spellCheck={false}
-            value={practiceInput}
-            onChange={(event) => setPracticeInput(event.target.value)}
-            className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest p-3 font-mono text-body-md"
+          <CodeEditor
+            value={code}
+            onChange={setCode}
+            language={language}
+            onLanguageChange={changeLanguage}
+            onRun={() => void submitCode()}
           />
         </div>
 
+        {progress && (
+          <p className="text-label-md text-primary" role="status">
+            {progress}
+          </p>
+        )}
         {notice && <Notice tone="success">{notice}</Notice>}
-        {submissionError && <Notice>{submissionError}</Notice>}
+        {submissionError && (
+          <Notice>
+            <span className="whitespace-pre-wrap">{submissionError}</span>
+          </Notice>
+        )}
         <div className="flex flex-col justify-end gap-3 sm:flex-row">
-          <Button
-            variant="secondary"
-            onClick={() => void runCodeLocal()}
-            busy={isExecuting}
-            disabled={isExecuting}
-          >
-            {isExecuting ? "กำลังทดลองรัน…" : "ทดลองรัน"}
-          </Button>
-
           <Button
             onClick={submitCode}
             busy={isSubmitting}
@@ -196,14 +184,6 @@ export default function CodingArenaPage({
           </Button>
         </div>
 
-        <div
-          aria-label="ผลการทำงานของโค้ด"
-          aria-live="polite"
-          className="h-48 shrink-0 overflow-auto whitespace-pre-wrap rounded-xl bg-on-surface p-4 font-mono text-sm text-on-primary"
-          role="status"
-        >
-          {output || "ผลการทำงานจะแสดงที่นี่"}
-        </div>
       </section>
     </div>
   );

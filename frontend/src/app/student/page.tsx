@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest } from "@/lib/api";
 import { canManage, canPlay } from "@/lib/roles";
+import { MatchRooms } from "@/components/match-rooms";
 
 type QueueState = components["schemas"]["QueueStateDto"];
 
@@ -173,7 +174,7 @@ export default function StudentDashboard() {
       <PageHeader
         eyebrow="พื้นที่นักศึกษา"
         title="สนามประลองอัลกอริทึม"
-        description="จับคู่แบบ 1 ต่อ 1 ใช้โจทย์ร่วมกัน 3 ข้อที่สุ่มไม่ซ้ำ ใครชนะครบ 2 ข้อก่อนเป็นผู้ชนะ"
+        description="สร้างห้องหรือเลือกห้องที่เพื่อนเปิดไว้ แข่งแก้โจทย์ร่วมกัน 3 ข้อด้วย JavaScript หรือ TypeScript ใครชนะครบ 2 ข้อก่อนเป็นผู้ชนะ"
       />
 
       {rating && (
@@ -199,11 +200,17 @@ export default function StudentDashboard() {
         </Notice>
       )}
 
+      <MatchRooms
+        hostingId={queue.state === "hosting" && queue.id ? queue.id : null}
+        disabled={authRequired || queue.state === "waiting"}
+      />
+
       <article className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-6 shadow-sm">
         <h2 className="font-display text-headline-md text-on-surface">
-          แข่งขัน 1-ต่อ-1
+          จับคู่ด่วน
         </h2>
         <p className="mt-2 text-body-md text-on-surface-variant">
+          ไม่อยากรอห้อง? เข้าคิวแล้วระบบจับคู่กับคนถัดไปให้ทันที ·
           แต่ละข้อมีเวลา 10 นาที ผู้ที่ส่งคำตอบถูกก่อนชนะข้อนั้น
           เมื่อหมดเวลาจะนับเสมอหากยังไม่มีผู้ชนะ
         </p>
@@ -226,9 +233,11 @@ export default function StudentDashboard() {
           ) : (
             <Button
               busy={busy}
-              disabled={busy || authRequired}
+              disabled={busy || authRequired || queue.state === "hosting"}
               disabledReason={
-                authRequired ? "กรุณาเข้าสู่ระบบก่อนเริ่มจับคู่" : undefined
+                authRequired
+                  ? "กรุณาเข้าสู่ระบบก่อนเริ่มจับคู่"
+                  : "ปิดห้องที่คุณสร้างไว้ก่อนเข้าคิวจับคู่ด่วน"
               }
               onClick={() => void joinQueue()}
               type="button"
