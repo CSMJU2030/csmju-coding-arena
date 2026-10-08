@@ -17,11 +17,13 @@ RUN sh /opt/arena/install.sh ca-certificates python3 pypy3 nodejs node-typescrip
       gawk mawk original-awk sed bc dc busybox jq m4 sqlite3 quickjs
 RUN sh /opt/arena/install.sh gcc g++ clang gobjc gfortran gnat fp-compiler gnucobol nasm binutils tcc gdc ldc \
       golang-go rustc valac nim
+# JDK (และ mono/ghc) ใน debian-slim ต้องมีโฟลเดอร์ man ไม่งั้น postinst ล้ม — install.sh ลบเนื้อหา man ทิ้งท้ายทุกชั้น
+RUN mkdir -p /usr/share/man/man1 /usr/share/man/man7
 RUN sh /opt/arena/install.sh default-jdk-headless kotlin scala groovy clojure jruby rhino
-RUN sh /opt/arena/install.sh mono-runtime mono-mcs mono-vbnc fsharp
-RUN sh /opt/arena/install.sh ghc ocaml-nox polyml smlnj mlton erlang-nox elixir lfe racket guile-3.0 chicken-bin \
+RUN mkdir -p /usr/share/man/man1 && sh /opt/arena/install.sh mono-runtime mono-mcs mono-vbnc fsharp
+RUN mkdir -p /usr/share/man/man1 && sh /opt/arena/install.sh ghc ocaml-nox polyml smlnj mlton erlang-nox elixir lfe racket guile-3.0 chicken-bin \
       sbcl clisp ecl gauche chezscheme scheme48 gambc picolisp newlisp fennel hy
-RUN sh /opt/arena/install.sh swi-prolog-nox gprolog gforth pforth gnu-smalltalk pike8.0 regina-rexx algol68g \
+RUN mkdir -p /usr/share/man/man1 && sh /opt/arena/install.sh swi-prolog-nox gprolog gforth pforth gnu-smalltalk pike8.0 regina-rexx algol68g \
       bwbasic yabasic ucblogo ghostscript nickle pari-gp beef r-base-core haxe neko yorick squirrel3 clips
 
 COPY arena-run.py /opt/arena/arena-run.py
