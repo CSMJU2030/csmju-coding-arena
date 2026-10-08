@@ -20,9 +20,17 @@ enum SubmissionStatus {
 }
 
 enum MatchStatus {
+  WAITING // ห้องที่สร้างไว้ รอคู่แข่งกดเข้าร่วม
   ACTIVE
   COMPLETED
   DRAW
+}
+
+/// ภาษาของคำตอบ — PYTHON เป็นของเดิม (ตรวจบน server) · JS/TS ตรวจในเบราว์เซอร์ของผู้เล่น
+enum CodeLanguage {
+  PYTHON
+  JAVASCRIPT
+  TYPESCRIPT
 }
 
 enum MatchRoundStatus {
@@ -89,6 +97,7 @@ model Submission {
   studentId    String           @map("student_id")
   problemId    String           @map("problem_id")
   sourceCode   String           @map("source_code") @db.Text
+  language     CodeLanguage     @default(PYTHON)
   status       SubmissionStatus @default(PENDING)
   createdAt    DateTime         @default(now()) @map("created_at")
   evaluationStartedAt DateTime? @map("evaluation_started_at")
@@ -119,7 +128,9 @@ model MatchQueue {
 model Match {
   id          String      @id @default(uuid())
   playerOneId String      @map("player_one_id")
-  playerTwoId String      @map("player_two_id")
+  playerTwoId String?     @map("player_two_id")
+  /// ชื่อห้อง (ไม่บังคับ) — ห้องที่สร้างเองแสดงในรายการห้อง
+  title       String?     @db.VarChar(60)
   readyPlayerOneAt DateTime? @map("ready_player_one_at")
   readyPlayerTwoAt DateTime? @map("ready_player_two_at")
   winnerId    String?     @map("winner_id")
@@ -128,12 +139,13 @@ model Match {
   completedAt DateTime?   @map("completed_at")
 
   playerOne PlayerRating         @relation("MatchPlayerOne", fields: [playerOneId], references: [id])
-  playerTwo PlayerRating         @relation("MatchPlayerTwo", fields: [playerTwoId], references: [id])
+  playerTwo PlayerRating?        @relation("MatchPlayerTwo", fields: [playerTwoId], references: [id])
   winner    PlayerRating?        @relation("MatchWinner", fields: [winnerId], references: [id])
   rounds    MatchRound[]
 
   @@index([playerOneId, status])
   @@index([playerTwoId, status])
+  @@index([status, createdAt])
   @@map("matches")
   updatedAt DateTime @updatedAt @map("updated_at")
 }

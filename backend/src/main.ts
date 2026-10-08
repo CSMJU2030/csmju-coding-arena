@@ -16,7 +16,8 @@ async function bootstrap() {
     ],
   });
 
-  app.useBodyParser('json', { limit: '50kb' });
+  // คำตอบที่ตรวจในเบราว์เซอร์ส่ง stdout ของทุกชุดทดสอบมาด้วย (สูงสุด 100 ชุด × 10,000 ตัวอักษร)
+  app.useBodyParser('json', { limit: '1mb' });
   app.useBodyParser('urlencoded', { extended: true, limit: '50kb' });
   app.useGlobalPipes(
     new ValidationPipe({

@@ -54,9 +54,6 @@ services:
       CORE_HUB_AUDIENCE: ${CORE_HUB_AUDIENCE:-csmju2030}
       SUBSYSTEM_ID: ${SUBSYSTEM_ID:-csmju-coding-arena}
       SUBSYSTEM_NAME: ${SUBSYSTEM_NAME:-Coding Arena}
-      # Set by DevOps only after the dedicated rootless judge daemon is configured.
-      DOCKER_HOST: ${DOCKER_HOST:-}
-      JUDGE_IMAGE: ${JUDGE_IMAGE:-python:3.12-alpine@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4}
       TZ: Asia/Bangkok
     tmpfs:
       - /tmp:size=32m

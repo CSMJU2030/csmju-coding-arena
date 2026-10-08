@@ -1,5 +1,6 @@
 import { Query } from '@nestjs/common';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
+import { TestInputsDto } from '../matches/browser-judge';
 import { ApiResult } from '../contracts/api-result.decorator';
 import {
   ProblemDto,
@@ -84,5 +85,15 @@ export class ProblemsController {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ) {
     return this.problemsService.findOne(id);
+  }
+
+  /** input ของชุดทดสอบ ให้เบราว์เซอร์รันโค้ดฝึกซ้อม (expected output ไม่ส่งออกไป) */
+  @Get(':id/test-inputs')
+  @RequirePermissions(Permission.SUBMISSION_CREATE)
+  @ApiResult(TestInputsDto, false, 200)
+  async getTestInputs(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.problemsService.testInputs(id);
   }
 }

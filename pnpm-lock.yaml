@@ -241,6 +241,9 @@ importers:
       react-dom:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -266,9 +269,6 @@ importers:
       tailwindcss:
         specifier: ^4
         version: 4.3.3
-      typescript:
-        specifier: ^5
-        version: 5.9.3
 
 packages:
 

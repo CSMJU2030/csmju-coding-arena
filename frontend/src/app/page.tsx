@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { PixelScene } from "@/components/pixel-scene";
 import { ErrorState, LoadingState } from "@/components/ui";
 import { ApiRequestError, apiRequest } from "@/lib/api";
-import { MATCHES_ENABLED } from "@/lib/features";
 import { canManage, canPlay, type RoleProfile } from "@/lib/roles";
 
 type Profile = RoleProfile;
@@ -54,10 +53,10 @@ export default function Lobby() {
     {
       href: "/student",
       title: "ประลอง 1 ต่อ 1",
-      detail: "จับคู่กับเพื่อน แก้โจทย์ชุดเดียวกัน ชนะ 2 ใน 3 ข้อ เก็บคะแนน Elo ไต่อันดับ",
+      detail: "สร้างห้องหรือเลือกห้องที่เพื่อนเปิดไว้ แข่งแก้โจทย์ชุดเดียวกันด้วย JavaScript หรือ TypeScript ชนะ 2 ใน 3 ข้อ เก็บ Elo",
       icon: Swords,
       tone: "bg-primary-container text-on-primary",
-      allowed: (p) => MATCHES_ENABLED && canPlay(p),
+      allowed: canPlay,
     },
     {
       href: "/games",
@@ -79,7 +78,7 @@ export default function Lobby() {
       detail: "เพิ่ม แก้ไข และปิดโจทย์ พร้อมชุดทดสอบสำหรับการประลอง",
       icon: Gamepad2,
       tone: "bg-primary-container text-on-primary",
-      allowed: (p) => MATCHES_ENABLED && canManage(p),
+      allowed: canManage,
     },
   ];
   const visible =
@@ -93,7 +92,7 @@ export default function Lobby() {
           <p className="pixel-font text-label-md text-brand-amber">CSMJU2030 · PRESS START</p>
           <h1 className="pixel-font text-headline-lg md:text-display-lg">CODING ARENA</h1>
           <p className="max-w-2xl text-body-lg text-white/85">
-            สนามฝึกเขียนโปรแกรมของสาขาวิทยาการคอมพิวเตอร์ — เล่นเกม CSS เก็บ XP และเขียนโค้ดได้ทันทีในเบราว์เซอร์
+            สนามฝึกเขียนโปรแกรมของสาขาวิทยาการคอมพิวเตอร์ — เปิดห้องประลองโค้ด 1 ต่อ 1 เล่นเกม CSS เก็บ XP และเขียนโค้ดได้ทันทีในเบราว์เซอร์
           </p>
           {state.status === "guest" && (
             <a href="/auth/login?next=%2F" className="pixel-button inline-flex min-h-12 items-center gap-2 bg-brand-amber px-6 font-bold text-brand-navy">
