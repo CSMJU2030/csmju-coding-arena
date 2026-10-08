@@ -22,7 +22,8 @@
     "test:e2e": "prisma generate && jest --config ./test/jest-e2e.json",
     "postinstall": "prisma generate",
     "generate:openapi": "ts-node --files src/generate-openapi.ts",
-    "test:competition": "ts-node --files test/competition.integration.ts"
+    "test:competition": "ts-node --files test/competition.integration.ts",
+    "languages:smoke": "ts-node --files src/scripts/smoke-languages.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.7",
