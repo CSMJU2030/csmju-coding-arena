@@ -525,6 +525,51 @@
         ]
       }
     },
+    "/api/v1/problems/{id}/test-inputs": {
+      "get": {
+        "operationId": "ProblemsController_getTestInputs",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TestInputsDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Problems"
+        ]
+      }
+    },
     "/api/v1/submissions": {
       "post": {
         "operationId": "SubmissionsController_createSubmission",
@@ -534,7 +579,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSubmissionDto"
+                "$ref": "#/components/schemas/BrowserJudgedSubmissionDto"
               }
             }
           }
@@ -558,7 +603,7 @@
                       ]
                     },
                     "data": {
-                      "$ref": "#/components/schemas/SubmissionDto"
+                      "$ref": "#/components/schemas/JudgedSubmissionDto"
                     }
                   }
                 }
@@ -848,6 +893,126 @@
         ]
       }
     },
+    "/api/v1/matches": {
+      "get": {
+        "operationId": "MatchesController_listRooms",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "WAITING",
+                "ACTIVE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MatchRoomDto"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "required": [
+                        "total",
+                        "page",
+                        "limit",
+                        "totalPages"
+                      ],
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "page": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Matches"
+        ]
+      },
+      "post": {
+        "operationId": "MatchesController_createRoom",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMatchRoomDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/MatchDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Matches"
+        ]
+      }
+    },
     "/api/v1/matches/queue": {
       "post": {
         "operationId": "MatchesController_joinQueue",
@@ -997,6 +1162,139 @@
         "tags": [
           "Matches"
         ]
+      },
+      "delete": {
+        "operationId": "MatchesController_cancelRoom",
+        "parameters": [
+          {
+            "name": "matchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeletedDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Matches"
+        ]
+      }
+    },
+    "/api/v1/matches/{matchId}/participants": {
+      "post": {
+        "operationId": "MatchesController_joinRoom",
+        "parameters": [
+          {
+            "name": "matchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/MatchDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Matches"
+        ]
+      }
+    },
+    "/api/v1/matches/{matchId}/test-inputs": {
+      "get": {
+        "operationId": "MatchesController_testInputs",
+        "parameters": [
+          {
+            "name": "matchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TestInputsDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Matches"
+        ]
       }
     },
     "/api/v1/matches/{matchId}/submissions": {
@@ -1017,7 +1315,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateMatchSubmissionDto"
+                "$ref": "#/components/schemas/BrowserJudgedSubmissionDto"
               }
             }
           }
@@ -1041,7 +1339,7 @@
                       ]
                     },
                     "data": {
-                      "$ref": "#/components/schemas/SubmissionDto"
+                      "$ref": "#/components/schemas/JudgedSubmissionDto"
                     }
                   }
                 }
@@ -1476,6 +1774,116 @@
           "timeLimitMs"
         ]
       },
+      "TestInputsDto": {
+        "type": "object",
+        "properties": {
+          "problemId": {
+            "type": "string"
+          },
+          "timeLimitMs": {
+            "type": "number"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "problemId",
+          "timeLimitMs",
+          "inputs"
+        ]
+      },
+      "JudgedSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "EVALUATING",
+              "ACCEPTED",
+              "WRONG_ANSWER",
+              "TIME_LIMIT_EXCEEDED",
+              "RUNTIME_ERROR",
+              "COMPILATION_ERROR"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "PYTHON",
+              "JAVASCRIPT",
+              "TYPESCRIPT"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evaluatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "failedTest": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "evaluatedAt",
+          "failedTest"
+        ]
+      },
+      "BrowserJudgedSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "problemId": {
+            "type": "string"
+          },
+          "sourceCode": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "JAVASCRIPT",
+              "TYPESCRIPT"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "COMPLETED",
+              "RUNTIME_ERROR",
+              "TIME_LIMIT_EXCEEDED",
+              "COMPILATION_ERROR"
+            ]
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "problemId",
+          "sourceCode",
+          "language",
+          "outcome",
+          "outputs"
+        ]
+      },
       "SubmissionDto": {
         "type": "object",
         "properties": {
@@ -1494,6 +1902,14 @@
               "COMPILATION_ERROR"
             ]
           },
+          "language": {
+            "type": "string",
+            "enum": [
+              "PYTHON",
+              "JAVASCRIPT",
+              "TYPESCRIPT"
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -1509,21 +1925,6 @@
           "status",
           "createdAt",
           "evaluatedAt"
-        ]
-      },
-      "CreateSubmissionDto": {
-        "type": "object",
-        "properties": {
-          "problemId": {
-            "type": "string"
-          },
-          "sourceCode": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "problemId",
-          "sourceCode"
         ]
       },
       "TestCaseDto": {
@@ -1590,28 +1991,6 @@
           }
         }
       },
-      "QueueStateDto": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "type": "string",
-            "enum": [
-              "idle",
-              "waiting",
-              "matched"
-            ]
-          },
-          "id": {
-            "type": "string"
-          },
-          "position": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "state"
-        ]
-      },
       "ParticipantDto": {
         "type": "object",
         "properties": {
@@ -1629,6 +2008,66 @@
           "id",
           "displayName",
           "eloRating"
+        ]
+      },
+      "MatchRoomDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "WAITING",
+              "ACTIVE"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "playerOne": {
+            "$ref": "#/components/schemas/ParticipantDto"
+          },
+          "playerTwo": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParticipantDto"
+              }
+            ]
+          },
+          "isMine": {
+            "type": "boolean"
+          },
+          "currentRound": {
+            "type": "number",
+            "nullable": true
+          },
+          "playerOneWins": {
+            "type": "number"
+          },
+          "playerTwoWins": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "createdAt",
+          "playerOne",
+          "playerTwo",
+          "isMine",
+          "currentRound",
+          "playerOneWins",
+          "playerTwoWins"
         ]
       },
       "MatchRoundDto": {
@@ -1690,9 +2129,14 @@
           "id": {
             "type": "string"
           },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
           "status": {
             "type": "string",
             "enum": [
+              "WAITING",
               "ACTIVE",
               "COMPLETED",
               "DRAW"
@@ -1709,7 +2153,13 @@
             "$ref": "#/components/schemas/ParticipantDto"
           },
           "playerTwo": {
-            "$ref": "#/components/schemas/ParticipantDto"
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParticipantDto"
+              }
+            ]
           },
           "currentRound": {
             "type": "number",
@@ -1725,6 +2175,7 @@
         "required": [
           "state",
           "id",
+          "title",
           "status",
           "winnerId",
           "myPlayerId",
@@ -1734,19 +2185,44 @@
           "rounds"
         ]
       },
-      "CreateMatchSubmissionDto": {
+      "CreateMatchRoomDto": {
         "type": "object",
         "properties": {
-          "problemId": {
+          "title": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "problemIds": {
+            "minItems": 3,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "QueueStateDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "waiting",
+              "hosting",
+              "matched"
+            ]
+          },
+          "id": {
             "type": "string"
           },
-          "sourceCode": {
-            "type": "string"
+          "position": {
+            "type": "number"
           }
         },
         "required": [
-          "problemId",
-          "sourceCode"
+          "state"
         ]
       },
       "LevelClearDto": {

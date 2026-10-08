@@ -7,6 +7,12 @@ import { Button, Notice, ErrorState, LoadingState } from "@/components/ui";
 import { useState, useEffect, use } from "react";
 import { CodeEditor } from "@/components/code-editor";
 import { ApiRequestError, apiRequest } from "@/lib/api";
+import {
+  judgeAndSubmit,
+  JUDGE_LANGUAGES,
+  verdictMessage,
+  type JudgeLanguage,
+} from "@/lib/judge";
 
 type Problem = components["schemas"]["ProblemDto"];
 
@@ -22,9 +28,16 @@ export default function CodingArenaPage({
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [code, setCode] = useState<string>(
-    "import sys\ndata = sys.stdin.read().split()\nif data:\n    # เขียนโค้ดของคุณที่นี่\n    pass",
-  );
+  const [language, setLanguage] = useState<JudgeLanguage>("JAVASCRIPT");
+  const [code, setCode] = useState<string>(JUDGE_LANGUAGES[0].starter);
+  const [progress, setProgress] = useState("");
+
+  function changeLanguage(next: JudgeLanguage) {
+    const starter = (id: JudgeLanguage) =>
+      JUDGE_LANGUAGES.find((item) => item.id === id)?.starter ?? "";
+    if (code.trim() === starter(language).trim()) setCode(starter(next));
+    setLanguage(next);
+  }
 
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,11 +76,22 @@ export default function CodingArenaPage({
     setSubmissionError("");
 
     try {
-      await apiRequest("/api/v1/submissions", {
-        method: "POST",
-        body: JSON.stringify({ problemId, sourceCode: code }),
+      const { submission, run } = await judgeAndSubmit({
+        inputsPath: `/api/v1/problems/${problemId}/test-inputs`,
+        submitPath: "/api/v1/submissions",
+        problemId,
+        language,
+        code,
+        onProgress: (done, total) =>
+          setProgress(
+            done < total
+              ? `กำลังรันชุดทดสอบ ${done + 1}/${total} ในเบราว์เซอร์ของคุณ…`
+              : "กำลังส่งผลให้ server ตัดสิน…",
+          ),
       });
-      setNotice("ส่งคำตอบแล้ว ระบบกำลังตรวจคำตอบ กรุณารอสักครู่");
+      if (submission.status === "ACCEPTED")
+        setNotice(verdictMessage(submission, run));
+      else setSubmissionError(verdictMessage(submission, run));
     } catch (requestError) {
       setSubmissionError(
         requestError instanceof Error
@@ -76,6 +100,7 @@ export default function CodingArenaPage({
       );
     } finally {
       setIsSubmitting(false);
+      setProgress("");
     }
     setCooldownRemaining(3);
     const interval = setInterval(() => {
@@ -126,11 +151,26 @@ export default function CodingArenaPage({
         className="flex min-h-0 flex-col gap-4 min-w-0 xl:col-span-3"
       >
         <div className="h-80 min-w-0 overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest shadow-sm md:h-96">
-          <CodeEditor value={code} onChange={setCode} />
+          <CodeEditor
+            value={code}
+            onChange={setCode}
+            language={language}
+            onLanguageChange={changeLanguage}
+            onRun={() => void submitCode()}
+          />
         </div>
 
+        {progress && (
+          <p className="text-label-md text-primary" role="status">
+            {progress}
+          </p>
+        )}
         {notice && <Notice tone="success">{notice}</Notice>}
-        {submissionError && <Notice>{submissionError}</Notice>}
+        {submissionError && (
+          <Notice>
+            <span className="whitespace-pre-wrap">{submissionError}</span>
+          </Notice>
+        )}
         <div className="flex flex-col justify-end gap-3 sm:flex-row">
           <Button
             onClick={submitCode}

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TestInputsDto } from '../matches/browser-judge';
 
 export class ProblemDto {
   @ApiProperty() id!: string;
@@ -39,9 +40,15 @@ export class SubmissionDto {
     ],
   })
   status!: string;
+  @ApiPropertyOptional({ enum: ['PYTHON', 'JAVASCRIPT', 'TYPESCRIPT'] })
+  language?: string;
   @ApiProperty({ format: 'date-time' }) createdAt!: string;
   @ApiProperty({ type: String, nullable: true, format: 'date-time' })
   evaluatedAt!: string | null;
+}
+export class JudgedSubmissionDto extends SubmissionDto {
+  /** ชุดทดสอบแรกที่ไม่ผ่าน (นับจาก 1) · null เมื่อผ่านทุกชุด */
+  @ApiProperty({ type: Number, nullable: true }) failedTest!: number | null;
 }
 export class ParticipantDto {
   @ApiProperty() id!: string;
@@ -61,16 +68,33 @@ export class MatchRoundDto {
 export class MatchDto {
   @ApiProperty({ enum: ['matched'] }) state!: string;
   @ApiProperty() id!: string;
-  @ApiProperty({ enum: ['ACTIVE', 'COMPLETED', 'DRAW'] }) status!: string;
+  @ApiProperty({ type: String, nullable: true }) title!: string | null;
+  @ApiProperty({ enum: ['WAITING', 'ACTIVE', 'COMPLETED', 'DRAW'] })
+  status!: string;
   @ApiProperty({ type: String, nullable: true }) winnerId!: string | null;
   @ApiProperty() myPlayerId!: string;
   @ApiProperty({ type: ParticipantDto }) playerOne!: ParticipantDto;
-  @ApiProperty({ type: ParticipantDto }) playerTwo!: ParticipantDto;
+  @ApiProperty({ type: ParticipantDto, nullable: true })
+  playerTwo!: ParticipantDto | null;
   @ApiProperty({ type: Number, nullable: true }) currentRound!: number | null;
   @ApiProperty({ type: [MatchRoundDto] }) rounds!: MatchRoundDto[];
 }
+export class MatchRoomDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ type: String, nullable: true }) title!: string | null;
+  @ApiProperty({ enum: ['WAITING', 'ACTIVE'] }) status!: string;
+  @ApiProperty({ format: 'date-time' }) createdAt!: string;
+  @ApiProperty({ type: ParticipantDto }) playerOne!: ParticipantDto;
+  @ApiProperty({ type: ParticipantDto, nullable: true })
+  playerTwo!: ParticipantDto | null;
+  @ApiProperty() isMine!: boolean;
+  @ApiProperty({ type: Number, nullable: true }) currentRound!: number | null;
+  @ApiProperty() playerOneWins!: number;
+  @ApiProperty() playerTwoWins!: number;
+}
 export class QueueStateDto {
-  @ApiProperty({ enum: ['idle', 'waiting', 'matched'] }) state!: string;
+  @ApiProperty({ enum: ['idle', 'waiting', 'hosting', 'matched'] })
+  state!: string;
   @ApiPropertyOptional() id?: string;
   @ApiPropertyOptional() position?: number;
 }
@@ -108,7 +132,10 @@ export const API_MODELS = [
   ProblemManagementDto,
   TestCaseDto,
   SubmissionDto,
+  JudgedSubmissionDto,
   ParticipantDto,
+  MatchRoomDto,
+  TestInputsDto,
   MatchRoundDto,
   MatchDto,
   QueueStateDto,

@@ -26,7 +26,8 @@ pnpm dev
 ```
 
 เปิด `http://localhost:3209` การเข้าสู่ระบบจะส่งไป Core Hub ไม่มีบัญชีหรือรหัสผ่านใน Coding Arena
-ตัวตรวจคำตอบต้องเข้าถึง Docker ได้ หาก Docker ไม่พร้อม คำตอบจะคงสถานะรอตรวจและลองใหม่โดยไม่ตัดสินแพ้
+server ไม่รันโค้ดของผู้ใช้: ประลอง 1 ต่อ 1 และการฝึกโจทย์รันโค้ด JavaScript/TypeScript ใน Web Worker ของเบราว์เซอร์
+โดยขอเฉพาะ input ของชุดทดสอบ (`/test-inputs`) แล้วส่ง stdout กลับมาให้ backend เทียบกับ expected output ที่ไม่เคยส่งออกไป
 
 ## ทดลองรันแบบ container ตามมาตรฐาน deploy
 
@@ -41,15 +42,6 @@ docker compose logs --tail=100 api
 
 ทั้งสาม service ต้อง healthy ก่อนลอง login ผ่าน `http://localhost:3209` ใน Chrome
 หยุด container โดยเก็บข้อมูลไว้ด้วย `docker compose down` (อย่าใช้ `-v` หากต้องการเก็บฐานข้อมูล)
-
-ถ้าต้องการทดสอบตัวตรวจโค้ดจาก API container ในเครื่อง ให้ใช้ compose override นี้แทน (ใช้ Docker socket เฉพาะ Docker Desktop ในเครื่อง):
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.local-judge.yml up -d --build
-```
-
-ก่อนเปิดใช้การตรวจโค้ดบน server ต้องได้รับอนุมัติจาก PM และให้ DevOps จัด Docker daemon แบบ rootless สำหรับงานนี้
-แล้วกำหนด `DOCKER_HOST` และเตรียม image `JUDGE_IMAGE` ที่ปักหมุด digest ไว้ ห้ามเชื่อม `/var/run/docker.sock` ของ daemon หลักเข้ากับ API container
 
 ## ลงทะเบียนใน Core Hub
 
